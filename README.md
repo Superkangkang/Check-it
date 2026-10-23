@@ -4,7 +4,12 @@
 
 ## 版本
 
-v0.2 — CSS 检查器 + 盒模型可视化
+v0.3 — CSS 检查器 + 盒模型可视化 + 可拖拽浮窗面板
+
+### v0.3 新增
+
+- 浮窗面板可拖拽移动、可缩放，位置和尺寸自动记忆
+- 浮窗面板作为唯一面板形态（已移除 DevTools 侧边面板）
 
 ### v0.2 新增
 
@@ -48,6 +53,6 @@ npm run dev      # 开发模式（监听文件变化）
 ## 技术栈
 
 - Chrome Extension Manifest V3
-- TypeScript + Webpack
-- 原生 DOM 操作（无框架依赖）
+- TypeScript + React 18
+- Webpack 5
 - Shadow DOM 样式隔离

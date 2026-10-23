@@ -1,6 +1,6 @@
 {
   "name": "delab",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "DeLab - 设计师的设计走查验收工具",
   "scripts": {
     "build": "webpack --mode=production",
