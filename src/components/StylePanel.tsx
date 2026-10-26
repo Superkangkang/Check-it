@@ -1,16 +1,22 @@
 // DeLab Style Panel - React component
 
 import { useState } from 'react';
-import { StyleGroup, isEmptyValue, formatColor, ColorFormat } from '../style-extractor';
+import { StyleGroup, ColorFormat, isEmptyValue } from '../style-extractor';
 import { PropertyRow } from './PropertyRow';
 
 interface StylePanelProps {
   groups: StyleGroup[];
   showAll: boolean;
   initialColorFormat?: ColorFormat;
+  /** Write a declaration to the inspected element; returns false when rejected */
+  onCommit: (prop: string, value: string) => boolean;
+  /** Revert a single property to its pre-edit value */
+  onReset: (prop: string) => void;
 }
 
-export function StylePanel({ groups, showAll, initialColorFormat = 'hex' }: StylePanelProps) {
+export function StylePanel({
+  groups, showAll, initialColorFormat = 'hex', onCommit, onReset,
+}: StylePanelProps) {
   const [colorFormat, setColorFormat] = useState<ColorFormat>(initialColorFormat);
 
   let isFirst = true;
@@ -19,7 +25,7 @@ export function StylePanel({ groups, showAll, initialColorFormat = 'hex' }: Styl
   for (const group of groups) {
     const filtered = showAll
       ? group.properties
-      : group.properties.filter(p => !isEmptyValue(p.name, p.value));
+      : group.properties.filter(p => p.modified || !isEmptyValue(p.name, p.value));
     if (filtered.length === 0) continue;
     visibleGroups.push({ name: group.name, props: filtered });
   }
@@ -69,11 +75,11 @@ export function StylePanel({ groups, showAll, initialColorFormat = 'hex' }: Styl
               {props.map(p => (
                 <PropertyRow
                   key={p.name}
-                  name={p.name}
-                  value={p.value}
-                  isColor={p.isColor}
+                  property={p}
                   isColorGroup={name === 'Color'}
                   colorFormat={colorFormat}
+                  onCommit={onCommit}
+                  onReset={onReset}
                 />
               ))}
             </div>

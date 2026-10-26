@@ -1,21 +1,25 @@
-// DeLab Viewfinder — 仅保留 1px 虚线线框
+// DeLab Viewfinder — 悬停 / 选中的 2px 实线线框
 
 export class Viewfinder {
   private wireframe: HTMLElement | null = null;
   private parent: ShadowRoot | HTMLElement;
+  private target: Element | null = null;
+  private frame = 0;
 
-  constructor(parent: ShadowRoot | HTMLElement) {
+  constructor(parent: ShadowRoot | HTMLElement, color = 'var(--delab-accent, #5e6ad2)') {
     this.parent = parent;
-    this.create();
+    this.create(color);
+    window.addEventListener('scroll', this.schedule, true);
+    window.addEventListener('resize', this.schedule);
   }
 
-  private create() {
+  private create(color: string) {
     this.wireframe = document.createElement('div');
     this.wireframe.style.cssText = `
       position: fixed;
       pointer-events: none;
-      z-index: 2147483643;
-      border: 1px dashed var(--delab-accent, #5e6ad2);
+      z-index: 2147483640;
+      border: 2px solid ${color};
       border-radius: 2px;
       display: none;
       opacity: 0;
@@ -25,7 +29,40 @@ export class Viewfinder {
   }
 
   show(target: Element) {
+    this.target = target;
+    this.place();
+  }
+
+  hide() {
+    this.target = null;
     if (!this.wireframe) return;
+    this.wireframe.style.opacity = '0';
+    setTimeout(() => {
+      if (this.wireframe) this.wireframe.style.display = 'none';
+    }, 150);
+  }
+
+  destroy() {
+    window.removeEventListener('scroll', this.schedule, true);
+    window.removeEventListener('resize', this.schedule);
+    if (this.frame) cancelAnimationFrame(this.frame);
+    if (this.wireframe) { this.wireframe.remove(); this.wireframe = null; }
+  }
+
+  /** 滚动 / 尺寸变化时重新贴合目标元素 */
+  private schedule = () => {
+    if (!this.target || this.frame) return;
+    this.frame = requestAnimationFrame(() => {
+      this.frame = 0;
+      this.place();
+    });
+  };
+
+  private place() {
+    const target = this.target;
+    if (!this.wireframe || !target) return;
+    if (!target.isConnected) { this.hide(); return; }
+
     try {
       const r = target.getBoundingClientRect();
       if (r.width === 0 && r.height === 0) { this.hide(); return; }
@@ -39,17 +76,5 @@ export class Viewfinder {
     } catch {
       this.hide();
     }
-  }
-
-  hide() {
-    if (!this.wireframe) return;
-    this.wireframe.style.opacity = '0';
-    setTimeout(() => {
-      if (this.wireframe) this.wireframe.style.display = 'none';
-    }, 150);
-  }
-
-  destroy() {
-    if (this.wireframe) { this.wireframe.remove(); this.wireframe = null; }
   }
 }

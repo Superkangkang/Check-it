@@ -37,7 +37,7 @@ export class BoxModelOverlay {
       bgEl.style.cssText = `
         position: fixed;
         pointer-events: none;
-        z-index: ${2147483640 + order.indexOf(key) * 2 + 1};
+        z-index: ${2147483630 + order.indexOf(key) * 2 + 1};
         display: none;
       `;
       bgEl.dataset.bgColor = COLORS[key].bg;
@@ -48,7 +48,7 @@ export class BoxModelOverlay {
       lineEl.style.cssText = `
         position: fixed;
         pointer-events: none;
-        z-index: ${2147483640 + order.indexOf(key) * 2 + 2};
+        z-index: ${2147483630 + order.indexOf(key) * 2 + 2};
         display: none;
       `;
       lineEl.dataset.borderColor = COLORS[key].border;

@@ -42,7 +42,8 @@ export function ColorPreview({ colorValue }: ColorPreviewProps) {
     backgroundColor: normalized,
   };
   if (isLightColor(normalized)) {
-    style.border = '1px solid var(--delab-border, #23252a)';
+    // visible on both light and dark panel backgrounds
+    style.border = '1px solid rgba(127, 127, 127, 0.45)';
   }
   return <span style={style} title={colorValue} />;
 }

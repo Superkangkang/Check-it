@@ -27,8 +27,13 @@ export class ShadowHost {
         position: static;
       }
 
-      * {
+      *, *::before, *::after {
         box-sizing: border-box;
+      }
+
+      /* 插件激活时统一使用 DOM 指针，内部不再显示系统光标 */
+      :host, *, *::before, *::after {
+        cursor: none !important;
       }
     `;
     this.shadowRoot.appendChild(style);

@@ -7,6 +7,9 @@ interface HeaderProps {
   onClose: () => void;
   showDragHint?: boolean;
   onDragStart?: (e: React.MouseEvent) => void;
+  /** Number of edited properties on the current element */
+  modifiedCount?: number;
+  onResetAll?: () => void;
 }
 
 const btnStyle: React.CSSProperties = {
@@ -23,7 +26,7 @@ const btnStyle: React.CSSProperties = {
   justifyContent: 'center',
 };
 
-export function Header({ onClose, showDragHint, onDragStart }: HeaderProps) {
+export function Header({ onClose, showDragHint, onDragStart, modifiedCount = 0, onResetAll }: HeaderProps) {
   const { isDark, toggle } = useTheme();
 
   return (
@@ -57,6 +60,15 @@ export function Header({ onClose, showDragHint, onDragStart }: HeaderProps) {
 
       {/* Actions */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+        {modifiedCount > 0 && onResetAll && (
+          <button
+            onClick={onResetAll}
+            title="Revert all edits on this element"
+            style={{ ...btnStyle, fontSize: 11, padding: '4px 8px', gap: 4 }}
+          >
+            Reset {modifiedCount}
+          </button>
+        )}
         <button onClick={toggle} title="Toggle theme" style={btnStyle}>
           {isDark ? <SunIcon size={16} /> : <MoonIcon size={16} />}
         </button>

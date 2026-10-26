@@ -3,10 +3,12 @@
 let activeTabId: number | null = null;
 
 chrome.runtime.onInstalled.addListener(() => {
-  chrome.contextMenus.create({
-    id: 'delab-inspect',
-    title: 'DeLab 检查元素',
-    contexts: ['page'],
+  chrome.contextMenus.removeAll(() => {
+    chrome.contextMenus.create({
+      id: 'delab-inspect',
+      title: 'DeLab 检查元素',
+      contexts: ['page'],
+    });
   });
 });
 

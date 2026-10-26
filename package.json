@@ -1,10 +1,11 @@
 {
   "name": "delab",
-  "version": "0.3.0",
+  "version": "0.5.0",
   "description": "DeLab - 设计师的设计走查验收工具",
   "scripts": {
     "build": "webpack --mode=production",
     "dev": "webpack --mode=development --watch",
+    "preview": "npm run build && python3 -m http.server 5173 --directory dist",
     "clean": "rm -rf dist && mkdir -p dist"
   },
   "devDependencies": {

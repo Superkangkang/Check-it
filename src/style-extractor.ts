@@ -1,5 +1,8 @@
 // DeLab Style Extractor — designer-focused property listing
 
+import { controlMeta, ControlType } from './property-controls';
+import { EditSession } from './edit-session';
+
 export interface StyleGroup {
   name: string;
   properties: StyleProperty[];
@@ -9,6 +12,46 @@ export interface StyleProperty {
   name: string;
   value: string;
   isColor: boolean;
+  /** Control used when the value goes into edit mode */
+  control: ControlType;
+  /** CSS properties written back to the element (first one is the primary key) */
+  cssProps: string[];
+  /** Unit hint for numeric inputs */
+  unit?: string;
+  /** Candidates for enum controls */
+  options?: string[];
+  /** Rows that cannot be edited (e.g. detected font) */
+  readOnly?: boolean;
+  /** Whether this property was edited in the current session */
+  modified?: boolean;
+  /** Pre-edit inline value, shown as a tooltip when modified */
+  original?: string | null;
+  /** Sub-fields for multi-value properties (margin / padding / border / radius / gap) */
+  parts?: StylePart[];
+}
+
+/** One editable sub-value of a multi-value property */
+export interface StylePart {
+  /** Tiny label inside the field: T / R / B / L / ↖ … */
+  label: string;
+  cssProp: string;
+  value: string;
+  control: ControlType;
+  unit?: string;
+  options?: string[];
+}
+
+/** Property as gathered from computed style, before control metadata is attached */
+interface RawProperty {
+  name: string;
+  value: string;
+  isColor: boolean;
+  parts?: StylePart[];
+}
+
+interface RawGroup {
+  name: string;
+  properties: RawProperty[];
 }
 
 export interface BoxModelValue {
@@ -119,33 +162,61 @@ export function toHex(value: string): string {
 }
 
 export class StyleExtractor {
-  extract(target: Element): StyleGroup[] {
+  extract(target: Element, session?: EditSession | null): StyleGroup[] {
     const c = window.getComputedStyle(target);
-    const groups: StyleGroup[] = [];
+    const groups: RawGroup[] = [];
 
     for (const [name, props] of Object.entries(GROUP_DEFS)) {
       if (name === 'Spacing') {
         const mg = this.mergeBoxShorthand(c, 'margin');
         const pd = this.mergeBoxShorthand(c, 'padding');
-        const merged: StyleProperty[] = [];
-        if (mg) merged.push(mg);
-        if (pd) merged.push(pd);
+        const merged: RawProperty[] = [];
+        if (mg) merged.push({ ...mg, parts: this.boxParts(c, 'margin') });
+        if (pd) merged.push({ ...pd, parts: this.boxParts(c, 'padding') });
         if (merged.length) groups.push({ name, properties: merged });
         continue;
       }
       if (name === 'Border') {
         const bd = this.mergeBorder(c);
-        if (bd) groups.push({ name, properties: [bd] });
+        if (bd) {
+          groups.push({
+            name,
+            properties: [{
+              ...bd,
+              parts: [
+                {
+                  label: 'W', cssProp: 'border-width', control: 'length', unit: 'px',
+                  value: c.getPropertyValue('border-top-width') || '0px',
+                },
+                {
+                  label: 'S', cssProp: 'border-style', control: 'enum',
+                  options: ['none', 'solid', 'dashed', 'dotted', 'double'],
+                  value: c.getPropertyValue('border-top-style') || 'none',
+                },
+              ],
+            }],
+          });
+        }
         continue;
       }
       if (name === 'Shape & Effect') {
-        const merged: StyleProperty[] = [];
+        const merged: RawProperty[] = [];
         // opacity
         const o = c.getPropertyValue('opacity');
         if (o && o !== '1') merged.push({ name: 'opacity', value: o, isColor: false });
         // border-radius
         const r = c.getPropertyValue('border-radius');
-        if (r && r !== '0px') merged.push({ name: 'border-radius', value: r, isColor: false });
+        if (r && r !== '0px') {
+          merged.push({
+            name: 'border-radius', value: r, isColor: false,
+            parts: [
+              { label: '\u2196', cssProp: 'border-top-left-radius', control: 'length', unit: 'px', value: c.getPropertyValue('border-top-left-radius') || '0px' },
+              { label: '\u2197', cssProp: 'border-top-right-radius', control: 'length', unit: 'px', value: c.getPropertyValue('border-top-right-radius') || '0px' },
+              { label: '\u2198', cssProp: 'border-bottom-right-radius', control: 'length', unit: 'px', value: c.getPropertyValue('border-bottom-right-radius') || '0px' },
+              { label: '\u2199', cssProp: 'border-bottom-left-radius', control: 'length', unit: 'px', value: c.getPropertyValue('border-bottom-left-radius') || '0px' },
+            ],
+          });
+        }
         // box-shadow (from GROUP_DEFS)
         for (const prop of props) {
           const v = c.getPropertyValue(prop);
@@ -155,7 +226,7 @@ export class StyleExtractor {
         continue;
       }
       if (name === 'Color') {
-        const colorProps: StyleProperty[] = [];
+        const colorProps: RawProperty[] = [];
         const textColor = c.getPropertyValue('color');
         if (textColor) colorProps.push({ name: 'color', value: toHex(textColor), isColor: true });
         const bgColor = c.getPropertyValue('background-color');
@@ -171,11 +242,27 @@ export class StyleExtractor {
         continue;
       }
 
-      const properties: StyleProperty[] = [];
+      const properties: RawProperty[] = [];
       for (const prop of props) {
         const value = c.getPropertyValue(prop);
         if (!value) continue;
         const isColor = COLOR_REGEX.test(value.trim()) || (prop.includes('color') && value !== '');
+
+        // gap can hold two values (row / column) — split them into separate fields
+        if (prop === 'gap') {
+          const [rowGap, colGap] = value.split(/\s+/);
+          if (rowGap && colGap) {
+            properties.push({
+              name: prop, value, isColor: false,
+              parts: [
+                { label: 'R', cssProp: 'row-gap', control: 'length', unit: 'px', value: rowGap },
+                { label: 'C', cssProp: 'column-gap', control: 'length', unit: 'px', value: colGap },
+              ],
+            });
+            continue;
+          }
+        }
+
         properties.push({ name: prop, value, isColor });
       }
 
@@ -188,11 +275,52 @@ export class StyleExtractor {
       if (properties.length) groups.push({ name, properties });
     }
 
-    return groups;
+    return groups.map(group => ({
+      name: group.name,
+      properties: group.properties.map(p => this.describe(p, session)),
+    }));
+  }
+
+  /** Attach control metadata and edit state to a raw property. */
+  private describe(p: RawProperty, session?: EditSession | null): StyleProperty {
+    const meta = controlMeta(p.name, p.value);
+    const primary = meta.cssProps[0];
+    const modified = session
+      ? (p.parts && p.parts.length
+          ? p.parts.some(part => session.isModified(part.cssProp))
+          : session.isModified(primary))
+      : false;
+
+    return {
+      name: p.name,
+      value: p.value,
+      isColor: p.isColor,
+      ...meta,
+      parts: p.parts,
+      modified,
+      original: session ? session.originalOf(primary) : null,
+    };
+  }
+
+  /** Four-side sub-fields for margin / padding. */
+  private boxParts(c: CSSStyleDeclaration, prefix: string): StylePart[] {
+    const sides: Array<[string, string]> = [
+      ['T', `${prefix}-top`],
+      ['R', `${prefix}-right`],
+      ['B', `${prefix}-bottom`],
+      ['L', `${prefix}-left`],
+    ];
+    return sides.map(([label, prop]) => ({
+      label,
+      cssProp: prop,
+      control: 'length' as ControlType,
+      unit: 'px',
+      value: c.getPropertyValue(prop) || '0px',
+    }));
   }
 
   // ── Margin / Padding 简写 ──
-  private mergeBoxShorthand(c: CSSStyleDeclaration, prefix: string): StyleProperty | null {
+  private mergeBoxShorthand(c: CSSStyleDeclaration, prefix: string): RawProperty | null {
     const t = c.getPropertyValue(`${prefix}-top`);
     const r = c.getPropertyValue(`${prefix}-right`);
     const b = c.getPropertyValue(`${prefix}-bottom`);
@@ -209,7 +337,7 @@ export class StyleExtractor {
   }
 
   // ── Border 简写 ──
-  private mergeBorder(c: CSSStyleDeclaration): StyleProperty | null {
+  private mergeBorder(c: CSSStyleDeclaration): RawProperty | null {
     const tw = c.getPropertyValue('border-top-width');
     const rw = c.getPropertyValue('border-right-width');
     const bw = c.getPropertyValue('border-bottom-width');

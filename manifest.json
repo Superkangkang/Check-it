@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "DeLab",
-  "version": "0.3.0",
-  "description": "设计师的设计走查验收工具 - 一键检查页面元素 CSS 样式与盒模型",
+  "version": "0.5.0",
+  "description": "设计师的设计走查验收工具 - 一键检查页面元素 CSS 样式与盒模型，并在任意 DOM 容器上留评论交给 AI 修改",
   "permissions": [
     "activeTab",
     "scripting",

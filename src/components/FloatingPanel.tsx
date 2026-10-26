@@ -21,6 +21,8 @@ interface StylePayload {
   classes: string;
   groups: StyleGroup[];
   boxModel?: BoxModel;
+  /** How many declarations were edited on this element */
+  modifiedCount?: number;
 }
 
 interface PanelPosition {
@@ -54,11 +56,16 @@ function loadPosition(): PanelPosition {
   };
 }
 
-export function FloatingPanel({ data, mode, visible, onClose }: {
+export function FloatingPanel({
+  data, mode, visible, onClose, onCommit, onReset, onResetAll,
+}: {
   data: StylePayload | null;
   mode: 'empty' | 'content';
   visible: boolean;
   onClose: () => void;
+  onCommit: (prop: string, value: string) => boolean;
+  onReset: (prop: string) => void;
+  onResetAll: () => void;
 }) {
   const [pos, setPos] = useState<PanelPosition>(loadPosition);
   const [showAll, setShowAll] = useState(false);
@@ -122,18 +129,25 @@ export function FloatingPanel({ data, mode, visible, onClose }: {
         style={{
           position: 'fixed', left: pos.left, top: pos.top,
           width: pos.width, height: pos.height,
-          zIndex: 2147483647,
+          zIndex: 2147483646,
           background: 'var(--delab-bg, #fdfcfc)',
           color: 'var(--delab-text, #000)',
           fontFamily: "'JetBrains Mono', 'SF Mono', Menlo, monospace",
           fontSize: 14,
+          textAlign: 'left',
           borderRadius: 10,
           boxShadow: '0 4px 32px rgba(8, 9, 10, 0.6), 0 0 0 1px var(--delab-border, #23252a)',
           border: '1px solid var(--delab-border, #e5e5e5)',
           display: 'flex', flexDirection: 'column', overflow: 'hidden',
         }}
       >
-        <Header onClose={onClose} showDragHint onDragStart={onDragStart} />
+        <Header
+          onClose={onClose}
+          showDragHint
+          onDragStart={onDragStart}
+          modifiedCount={data?.modifiedCount ?? 0}
+          onResetAll={onResetAll}
+        />
 
         {mode === 'empty' ? (
           <div style={{
@@ -143,14 +157,14 @@ export function FloatingPanel({ data, mode, visible, onClose }: {
             gap: 10, userSelect: 'none',
           }}>
             <InspectIcon size={36} />
-            <span>Click an element to inspect</span>
+            <span>Click an element to measure</span>
           </div>
         ) : data && (
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
             <ElementInfo tagName={data.tagName} id={data.id} classes={data.classes} visible />
             <div style={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>
-              {data.boxModel && <BoxModelDiagram bm={data.boxModel} />}
-              <StylePanel groups={data.groups} showAll={showAll} />
+              {data.boxModel && <BoxModelDiagram bm={data.boxModel} onCommit={onCommit} />}
+              <StylePanel groups={data.groups} showAll={showAll} onCommit={onCommit} onReset={onReset} />
             </div>
             <ToggleBar showAll={showAll} onChange={setShowAll} />
           </div>
@@ -202,19 +216,29 @@ function ToggleBar({ showAll, onChange }: { showAll: boolean; onChange: (v: bool
 
 // --- Imperative API for content-script ---
 
+export interface PanelCallbacks {
+  onClose: () => void;
+  /** Write a declaration to the inspected element; returns false when rejected */
+  onCommit: (prop: string, value: string) => boolean;
+  /** Revert a single property to its pre-edit value */
+  onReset: (prop: string) => void;
+  /** Revert every edit made on the current element */
+  onResetAll: () => void;
+}
+
 export class FloatingPanelManager {
   private container: HTMLElement;
   private root: ReturnType<typeof createRoot>;
   private _data: StylePayload | null = null;
   private _mode: 'empty' | 'content' = 'empty';
   private _visible = false;
-  private _onClose: () => void;
+  private callbacks: PanelCallbacks;
 
-  constructor(onClose: () => void) {
-    this._onClose = onClose;
+  constructor(mount: ShadowRoot, callbacks: PanelCallbacks) {
+    this.callbacks = callbacks;
     this.container = document.createElement('div');
     this.container.id = 'delab-floating-root';
-    document.body.appendChild(this.container);
+    mount.appendChild(this.container);
     this.root = createRoot(this.container);
     this._render();
   }
@@ -228,8 +252,11 @@ export class FloatingPanelManager {
         onClose: () => {
           this._visible = false;
           this._render();
-          this._onClose();
+          this.callbacks.onClose();
         },
+        onCommit: this.callbacks.onCommit,
+        onReset: this.callbacks.onReset,
+        onResetAll: this.callbacks.onResetAll,
       })
     );
   }
@@ -251,6 +278,10 @@ export class FloatingPanelManager {
   hide() {
     this._visible = false;
     this._render();
+  }
+
+  isVisible(): boolean {
+    return this._visible;
   }
 
   destroy() {
