@@ -4,13 +4,15 @@ import { ElementIdentity } from './element-identity';
 
 export interface CommentThread {
   id: string;
-  /** 页面键：pathname + search，评论按页面隔离 */
+  /** 页面键：站点 origin，评论按站点归档（页内 tab / 路由跳转不重置） */
   page: string;
   url: string;
   identity: ElementIdentity;
   body: string;
   resolved: boolean;
   createdAt: number;
+  /** 评论时的元素区域截图（JPEG dataURL），跨页面定位失效时用于辨认 */
+  snapshot?: string;
 }
 
 type CommentMap = Record<string, CommentThread[]>;
@@ -18,7 +20,7 @@ type CommentMap = Record<string, CommentThread[]>;
 const STORAGE_KEY = 'delab-comments';
 
 export function pageKey(): string {
-  return `${location.pathname}${location.search}`;
+  return location.origin;
 }
 
 export function createThread(identity: ElementIdentity, body: string): CommentThread {

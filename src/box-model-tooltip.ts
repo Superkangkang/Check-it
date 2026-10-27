@@ -112,11 +112,9 @@ export class GlassLabel {
     if (!el || !target || !target.isConnected) return;
 
     const rect = target.getBoundingClientRect();
-    const width = el.offsetWidth || 40;
-    const left = Math.max(4, Math.min(rect.left, window.innerWidth - width - 4));
-    const top = Math.max(4, Math.min(rect.bottom + GAP, window.innerHeight - HEIGHT - 4));
 
-    el.style.left = `${Math.round(left)}px`;
-    el.style.top = `${Math.round(top)}px`;
+    // 不做视口边界吸附：跟随元素一起滚出视口
+    el.style.left = `${Math.round(rect.left)}px`;
+    el.style.top = `${Math.round(rect.bottom + GAP)}px`;
   }
 }

@@ -9,6 +9,8 @@ export interface PopoverActions {
   onDelete: (thread: CommentThread) => void;
   /** 复制全部未解决评论给 AI */
   onCopyAll: () => void;
+  /** 查看评论截图大图 */
+  onPreviewImage: (dataUrl: string) => void;
   /** 弹层被关闭（Esc / 点击外部 / 关闭按钮） */
   onDismiss: () => void;
 }
@@ -124,6 +126,13 @@ export class CommentPopover {
     };
 
     textarea.addEventListener('keydown', event => {
+      if (event.key === 'Escape') {
+        // 输入态下 Esc 由输入框自己收起，避免被全局快捷键提前拦下
+        event.preventDefault();
+        event.stopPropagation();
+        this.dismiss();
+        return;
+      }
       if (event.key === 'Enter' && !event.shiftKey) {
         event.preventDefault();
         commit();
@@ -162,7 +171,32 @@ export class CommentPopover {
     copy.addEventListener('click', () => this.actions.onCopyAll());
 
     footer.append(remove, resolve, copy);
-    this.body.append(text, meta, footer);
+
+    // 元素区域截图：定位失效时帮助确认评论对象
+    if (thread.snapshot) {
+      const shot = document.createElement('img');
+      shot.src = thread.snapshot;
+      shot.alt = '';
+      shot.title = '查看大图';
+      shot.style.cssText = `
+        display: block;
+        width: 100%;
+        max-height: 132px;
+        object-fit: cover;
+        margin-top: 8px;
+        border-radius: 6px;
+        border: 1px solid var(--delab-border, #e5e5e5);
+        background: var(--delab-field-bg, #f2f0ee);
+        cursor: zoom-in;
+      `;
+      shot.addEventListener('click', event => {
+        event.stopPropagation();
+        this.actions.onPreviewImage(thread.snapshot!);
+      });
+      this.body.append(text, meta, shot, footer);
+    } else {
+      this.body.append(text, meta, footer);
+    }
 
     this.show();
   }
@@ -237,6 +271,8 @@ export class CommentPopover {
     if (!this.opened) return;
     const path = event.composedPath();
     if (path.includes(this.card)) return;
+    // 大图预览开着时，点遮罩只关大图，不收起评论弹层
+    if (path.some(node => (node as HTMLElement)?.id === 'delab-lightbox')) return;
     // 点在「评论」按钮上时由按钮自己处理，不算点外部
     const onButton = path.some(node => (node as HTMLElement)?.id === 'delab-comment-button');
     if (onButton) return;

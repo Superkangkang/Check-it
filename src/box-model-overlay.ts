@@ -18,6 +18,8 @@ export class BoxModelOverlay {
   private extractor: StyleExtractor;
   private rafId: number | null = null;
   private parent: ShadowRoot | HTMLElement;
+  /** 当前展示中的目标元素，滚动时据此重新贴合 */
+  private target: Element | null = null;
 
   constructor(parent: ShadowRoot | HTMLElement) {
     this.parent = parent;
@@ -25,6 +27,8 @@ export class BoxModelOverlay {
     const result = this.createLayers();
     this.layers = result.bg;
     this.lines = result.line;
+    window.addEventListener('scroll', this.schedule, true);
+    window.addEventListener('resize', this.schedule);
   }
 
   private createLayers(): { bg: Record<BoxLayer, HTMLElement>; line: Record<BoxLayer, HTMLElement> } {
@@ -34,6 +38,7 @@ export class BoxModelOverlay {
 
     for (const key of order) {
       const bgEl = document.createElement('div');
+      bgEl.classList.add('delab-overlay');
       bgEl.style.cssText = `
         position: fixed;
         pointer-events: none;
@@ -45,6 +50,7 @@ export class BoxModelOverlay {
       bg[key] = bgEl;
 
       const lineEl = document.createElement('div');
+      lineEl.classList.add('delab-overlay');
       lineEl.style.cssText = `
         position: fixed;
         pointer-events: none;
@@ -59,6 +65,7 @@ export class BoxModelOverlay {
   }
 
   show(target: Element) {
+    this.target = target;
     if (this.rafId) cancelAnimationFrame(this.rafId);
     this.rafId = requestAnimationFrame(() => {
       this.rafId = null;
@@ -66,8 +73,18 @@ export class BoxModelOverlay {
     });
   }
 
+  /** 滚动 / 尺寸变化时重新贴合目标元素 */
+  private schedule = () => {
+    if (!this.target || this.rafId) return;
+    this.rafId = requestAnimationFrame(() => {
+      this.rafId = null;
+      if (this.target) this.update(this.target);
+    });
+  };
+
   private update(target: Element) {
     try {
+      if (!target.isConnected) { this.hide(); return; }
       const rect = target.getBoundingClientRect();
       if (rect.width === 0 && rect.height === 0) { this.hide(); return; }
 
@@ -119,6 +136,7 @@ export class BoxModelOverlay {
   }
 
   hide() {
+    this.target = null;
     for (const key of ['margin','border','padding','content'] as BoxLayer[]) {
       this.layers[key].style.display = 'none';
       this.lines[key].style.display = 'none';
@@ -126,6 +144,9 @@ export class BoxModelOverlay {
   }
 
   destroy() {
+    window.removeEventListener('scroll', this.schedule, true);
+    window.removeEventListener('resize', this.schedule);
+    this.target = null;
     if (this.rafId) cancelAnimationFrame(this.rafId);
     for (const key of ['margin','border','padding','content'] as BoxLayer[]) {
       this.layers[key].remove();

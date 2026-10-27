@@ -4,11 +4,13 @@ import * as React from 'react';
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { createRoot } from 'react-dom/client';
 import { StyleGroup, BoxModel } from '../style-extractor';
+import type { CommentThread } from '../comment-store';
 import { ThemeProvider } from '../theme-context';
 import { Header } from './Header';
 import { ElementInfo } from './ElementInfo';
 import { BoxModelDiagram } from './BoxModelDiagram';
 import { StylePanel } from './StylePanel';
+import { CommentsView } from './CommentsView';
 import { InspectIcon } from './Icon';
 
 const DEFAULT_WIDTH = 420;
@@ -57,15 +59,26 @@ function loadPosition(): PanelPosition {
 }
 
 export function FloatingPanel({
-  data, mode, visible, onClose, onCommit, onReset, onResetAll,
+  data, mode, view = 'style', comments = [], activeCommentId = null,
+  visible, onClose, onCommit, onReset, onResetAll,
+  onLocateComment, onToggleResolveComment, onDeleteComment, onCopyAllComments, onPreviewCommentImage,
 }: {
   data: StylePayload | null;
   mode: 'empty' | 'content';
+  /** style = 元素样式，comments = 站点级评论列表 */
+  view?: 'style' | 'comments';
+  comments?: CommentThread[];
+  activeCommentId?: string | null;
   visible: boolean;
   onClose: () => void;
   onCommit: (prop: string, value: string) => boolean;
   onReset: (prop: string) => void;
   onResetAll: () => void;
+  onLocateComment?: (id: string) => void;
+  onToggleResolveComment?: (thread: CommentThread) => void;
+  onDeleteComment?: (thread: CommentThread) => void;
+  onCopyAllComments?: () => void;
+  onPreviewCommentImage?: (dataUrl: string) => void;
 }) {
   const [pos, setPos] = useState<PanelPosition>(loadPosition);
   const [showAll, setShowAll] = useState(false);
@@ -145,11 +158,21 @@ export function FloatingPanel({
           onClose={onClose}
           showDragHint
           onDragStart={onDragStart}
-          modifiedCount={data?.modifiedCount ?? 0}
-          onResetAll={onResetAll}
+          modifiedCount={view === 'style' ? data?.modifiedCount ?? 0 : 0}
+          onResetAll={view === 'style' ? onResetAll : undefined}
         />
 
-        {mode === 'empty' ? (
+        {view === 'comments' ? (
+          <CommentsView
+            comments={comments}
+            activeId={activeCommentId}
+            onLocate={id => onLocateComment?.(id)}
+            onToggleResolve={thread => onToggleResolveComment?.(thread)}
+            onDelete={thread => onDeleteComment?.(thread)}
+            onCopyAll={() => onCopyAllComments?.()}
+            onPreview={dataUrl => onPreviewCommentImage?.(dataUrl)}
+          />
+        ) : mode === 'empty' ? (
           <div style={{
             flex: 1, display: 'flex', flexDirection: 'column',
             alignItems: 'center', justifyContent: 'center',
@@ -224,6 +247,13 @@ export interface PanelCallbacks {
   onReset: (prop: string) => void;
   /** Revert every edit made on the current element */
   onResetAll: () => void;
+  /** 评论列表：定位到元素 */
+  onLocateComment: (id: string) => void;
+  onToggleResolveComment: (thread: CommentThread) => void;
+  onDeleteComment: (thread: CommentThread) => void;
+  onCopyAllComments: () => void;
+  /** 评论截图查看大图 */
+  onPreviewCommentImage: (dataUrl: string) => void;
 }
 
 export class FloatingPanelManager {
@@ -231,6 +261,9 @@ export class FloatingPanelManager {
   private root: ReturnType<typeof createRoot>;
   private _data: StylePayload | null = null;
   private _mode: 'empty' | 'content' = 'empty';
+  private _view: 'style' | 'comments' = 'style';
+  private _comments: CommentThread[] = [];
+  private _activeCommentId: string | null = null;
   private _visible = false;
   private callbacks: PanelCallbacks;
 
@@ -248,6 +281,9 @@ export class FloatingPanelManager {
       React.createElement(FloatingPanel, {
         data: this._data,
         mode: this._mode,
+        view: this._view,
+        comments: this._comments,
+        activeCommentId: this._activeCommentId,
         visible: this._visible,
         onClose: () => {
           this._visible = false;
@@ -257,11 +293,17 @@ export class FloatingPanelManager {
         onCommit: this.callbacks.onCommit,
         onReset: this.callbacks.onReset,
         onResetAll: this.callbacks.onResetAll,
+        onLocateComment: this.callbacks.onLocateComment,
+        onToggleResolveComment: this.callbacks.onToggleResolveComment,
+        onDeleteComment: this.callbacks.onDeleteComment,
+        onCopyAllComments: this.callbacks.onCopyAllComments,
+        onPreviewCommentImage: this.callbacks.onPreviewCommentImage,
       })
     );
   }
 
   showEmpty() {
+    this._view = 'style';
     this._mode = 'empty';
     this._visible = true;
     this._data = null;
@@ -269,10 +311,27 @@ export class FloatingPanelManager {
   }
 
   showData(data: StylePayload) {
+    this._view = 'style';
     this._data = data;
     this._mode = 'content';
     this._visible = true;
     this._render();
+  }
+
+  /** 评论模式：面板展示站点级评论列表 */
+  showComments(comments: CommentThread[], activeId: string | null = null) {
+    this._view = 'comments';
+    this._comments = comments;
+    this._activeCommentId = activeId;
+    this._visible = true;
+    this._render();
+  }
+
+  /** 评论增删改后刷新列表内容，不改变当前视图 */
+  setComments(comments: CommentThread[], activeId: string | null = null) {
+    this._comments = comments;
+    this._activeCommentId = activeId;
+    if (this._view === 'comments') this._render();
   }
 
   hide() {

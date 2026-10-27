@@ -46,7 +46,21 @@ function sendToTab(tabId: number, message: object) {
 }
 
 // 消息路由
-chrome.runtime.onMessage.addListener((message, sender, _sendResponse) => {
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  // 评论截图：抓当前标签页可视区，由 content script 负责裁剪
+  if (message.type === 'CAPTURE_VIEWPORT') {
+    const windowId = sender.tab?.windowId;
+    if (windowId == null) {
+      sendResponse({ dataUrl: null });
+      return false;
+    }
+    chrome.tabs
+      .captureVisibleTab(windowId, { format: 'jpeg', quality: 80 })
+      .then(dataUrl => sendResponse({ dataUrl }))
+      .catch(() => sendResponse({ dataUrl: null }));
+    return true;
+  }
+
   // Esc / 关闭退出
   if (message.type === 'INSPECT_MODE_CHANGED' && !message.active) {
     activeTabId = null;

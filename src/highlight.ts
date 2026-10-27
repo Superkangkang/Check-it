@@ -6,15 +6,20 @@ export class Viewfinder {
   private target: Element | null = null;
   private frame = 0;
 
-  constructor(parent: ShadowRoot | HTMLElement, color = 'var(--delab-accent, #5e6ad2)') {
+  constructor(
+    parent: ShadowRoot | HTMLElement,
+    color = 'var(--delab-accent, #5e6ad2)',
+    id = 'delab-hover-frame'
+  ) {
     this.parent = parent;
-    this.create(color);
+    this.create(color, id);
     window.addEventListener('scroll', this.schedule, true);
     window.addEventListener('resize', this.schedule);
   }
 
-  private create(color: string) {
+  private create(color: string, id: string) {
     this.wireframe = document.createElement('div');
+    this.wireframe.id = id;
     this.wireframe.style.cssText = `
       position: fixed;
       pointer-events: none;

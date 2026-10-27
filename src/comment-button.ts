@@ -90,14 +90,11 @@ export class CommentButton {
     }
     this.node.style.display = 'inline-flex';
 
-    const width = this.node.offsetWidth || SIZE;
-    let top = rect.bottom + GAP;
-    if (top + SIZE + GAP > window.innerHeight) {
-      top = rect.top - SIZE - GAP;
-    }
-    const left = Math.max(GAP, Math.min(rect.left + this.offsetX, window.innerWidth - width - GAP));
+    // 不做视口边界吸附：跟随元素一起滚出视口
+    const left = rect.left + this.offsetX;
+    const top = rect.bottom + GAP;
 
     this.node.style.left = `${Math.round(left)}px`;
-    this.node.style.top = `${Math.round(Math.max(GAP, top))}px`;
+    this.node.style.top = `${Math.round(top)}px`;
   }
 }

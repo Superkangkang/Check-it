@@ -3,6 +3,7 @@
 export class ShadowHost {
   private host: HTMLElement;
   private shadowRoot: ShadowRoot;
+  private cursorStyle!: HTMLStyleElement;
 
   constructor() {
     // 创建宿主元素
@@ -30,17 +31,28 @@ export class ShadowHost {
       *, *::before, *::after {
         box-sizing: border-box;
       }
-
-      /* 插件激活时统一使用 DOM 指针，内部不再显示系统光标 */
-      :host, *, *::before, *::after {
-        cursor: none !important;
-      }
     `;
     this.shadowRoot.appendChild(style);
+
+    // 走查模式隐藏系统指针（改用 DOM 指针）；浏览器模式需恢复，故单独可控
+    this.cursorStyle = document.createElement('style');
+    this.cursorStyle.textContent = `:host, *, *::before, *::after { cursor: none !important; }`;
+    this.cursorStyle.media = 'not all';
+    this.shadowRoot.appendChild(this.cursorStyle);
+  }
+
+  /** 是否隐藏 Shadow DOM 内的系统指针 */
+  setCursorHidden(hidden: boolean) {
+    this.cursorStyle.media = hidden ? 'all' : 'not all';
   }
 
   getRoot(): ShadowRoot {
     return this.shadowRoot;
+  }
+
+  /** 宿主元素，截屏前需要整体隐藏插件 UI */
+  getElement(): HTMLElement {
+    return this.host;
   }
 
   setThemeVariables(variables: Record<string, string>) {

@@ -68,6 +68,7 @@ function App() {
   useEffect(() => {
     const pointer = new PointerCursor(host.getRoot());
     pointer.enable();
+    host.setCursorHidden(true);
     const cursorStyle = document.createElement('style');
     cursorStyle.textContent = 'html, html body * { cursor: none !important; }';
     document.head.appendChild(cursorStyle);
@@ -107,6 +108,8 @@ function App() {
         setThreads(prev => prev.filter(item => item.id !== thread.id));
         popover.close();
       },
+      // 预览页的 mock 评论没有截图，大图预览仅在生产插件里生效
+      onPreviewImage: () => {},
       onCopyAll: () => { void navigator.clipboard?.writeText(toMarkdown(threadsRef.current, location.href)); },
       onDismiss: () => {
         const el = selectedRef.current;
