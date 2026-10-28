@@ -37,28 +37,39 @@ export function CommentsView({
         .delab-cm-toolbar {
           display: flex;
           align-items: center;
-          gap: 6px;
+          gap: 8px;
           padding: 8px 12px;
-          border-bottom: 1px solid var(--delab-border, #e5e5e5);
+          border-bottom: 1px solid var(--delab-border, rgba(0,0,0,0.08));
           flex-shrink: 0;
         }
-        .delab-cm-chip {
+        /* 分段选择器：getgradients 的 Flow / Points 样式 */
+        .delab-cm-segments {
+          display: flex;
+          align-items: center;
+          gap: 2px;
+          padding: 2px;
+          border-radius: 8px;
+          background: var(--delab-sel, rgba(0, 0, 0, 0.07));
+        }
+        .delab-cm-seg {
           appearance: none;
           font: inherit;
           font-size: 11px;
+          font-weight: 500;
           line-height: 1;
           padding: 4px 8px;
-          border-radius: 999px;
-          border: 1px solid var(--delab-border, #e5e5e5);
+          border-radius: 6px;
+          border: none;
           background: transparent;
-          color: var(--delab-text-secondary, #777169);
+          color: var(--delab-text-secondary, #57575e);
           cursor: pointer;
+          transition: background 0.12s ease, color 0.12s ease;
         }
-        .delab-cm-chip:hover { color: var(--delab-text, #000); }
-        .delab-cm-chip[data-active='true'] {
-          color: var(--delab-text, #000);
-          border-color: var(--delab-accent, #5e6ad2);
-          background: color-mix(in srgb, var(--delab-accent, #5e6ad2) 14%, transparent);
+        .delab-cm-seg:hover { color: var(--delab-text, #141416); }
+        .delab-cm-seg[data-active='true'] {
+          color: var(--delab-text, #141416);
+          background: var(--delab-bg, #f5f5f6);
+          box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
         }
         .delab-cm-copy {
           margin-left: auto;
@@ -66,17 +77,16 @@ export function CommentsView({
           font: inherit;
           font-size: 11px;
           line-height: 1;
-          padding: 4px 8px;
+          padding: 5px 9px;
           border-radius: 6px;
-          border: 1px solid var(--delab-border, #e5e5e5);
-          background: transparent;
-          color: var(--delab-text-secondary, #777169);
+          border: none;
+          background: var(--delab-btn-bg, #141416);
+          color: var(--delab-btn-text, #ffffff);
           cursor: pointer;
+          transition: opacity 0.12s ease;
         }
-        .delab-cm-copy:hover {
-          color: var(--delab-text, #000);
-          border-color: var(--delab-accent, #5e6ad2);
-        }
+        .delab-cm-copy:hover { opacity: 0.85; }
+        .delab-cm-copy:disabled { opacity: 0.4; cursor: default; }
         .delab-cm-list {
           flex: 1;
           min-height: 0;
@@ -89,7 +99,7 @@ export function CommentsView({
           justify-content: center;
           height: 100%;
           font-size: 12px;
-          color: var(--delab-text-secondary, #777169);
+          color: var(--delab-text-tertiary, #8a8a90);
         }
         .delab-cm-item {
           display: flex;
@@ -111,12 +121,12 @@ export function CommentsView({
           padding: 0;
           overflow: hidden;
           border-radius: 6px;
-          border: 1px solid var(--delab-border, #e5e5e5);
-          background: var(--delab-field-bg, #f2f0ee);
+          border: 1px solid var(--delab-border, rgba(0,0,0,0.08));
+          background: var(--delab-field-bg, #ffffff);
           cursor: zoom-in;
         }
         .delab-cm-thumb:hover {
-          border-color: var(--delab-accent, #5e6ad2);
+          border-color: var(--delab-accent, #32f08c);
         }
         .delab-cm-thumb img {
           display: block;
@@ -125,13 +135,13 @@ export function CommentsView({
           object-fit: cover;
         }
         .delab-cm-item + .delab-cm-item { margin-top: 2px; }
-        .delab-cm-item:hover { background: var(--delab-row-hover, #f5f3f1); }
+        .delab-cm-item:hover { background: var(--delab-row-hover, rgba(0,0,0,0.045)); }
         .delab-cm-item[data-active='true'] {
-          background: color-mix(in srgb, var(--delab-accent, #5e6ad2) 14%, transparent);
+          background: var(--delab-accent-soft, rgba(50,240,140,0.14));
         }
         .delab-cm-item[data-resolved='true'] .delab-cm-summary,
         .delab-cm-item[data-resolved='true'] .delab-cm-body {
-          color: var(--delab-text-secondary, #777169);
+          color: var(--delab-text-tertiary, #8a8a90);
           text-decoration: line-through;
         }
         .delab-cm-head {
@@ -141,15 +151,17 @@ export function CommentsView({
         }
         .delab-cm-index {
           flex: none;
-          width: 16px;
+          min-width: 16px;
           height: 16px;
+          padding: 0 4px;
           border-radius: 999px;
-          background: var(--delab-accent, #5e6ad2);
-          color: #fff;
+          background: var(--delab-accent, #32f08c);
+          color: var(--delab-accent-contrast, #0b0b0c);
           font-size: 10px;
           font-weight: 700;
           line-height: 16px;
           text-align: center;
+          box-sizing: border-box;
         }
         .delab-cm-summary {
           flex: 1;
@@ -158,22 +170,22 @@ export function CommentsView({
           text-overflow: ellipsis;
           white-space: nowrap;
           font-size: 11px;
-          color: var(--delab-text-secondary, #777169);
+          color: var(--delab-text-secondary, #57575e);
         }
         .delab-cm-state {
           flex: none;
           padding: 0 5px;
           border-radius: 4px;
-          border: 1px solid var(--delab-border, #e5e5e5);
+          border: 1px solid var(--delab-border-strong, rgba(0,0,0,0.16));
           font-size: 10px;
           line-height: 16px;
-          color: var(--delab-text-secondary, #777169);
+          color: var(--delab-text-tertiary, #8a8a90);
         }
         .delab-cm-body {
           margin: 4px 0 0 22px;
           font-size: 12px;
           line-height: 1.55;
-          color: var(--delab-text, #000);
+          color: var(--delab-text, #141416);
           white-space: pre-wrap;
           word-break: break-word;
         }
@@ -183,7 +195,7 @@ export function CommentsView({
           align-items: center;
           gap: 8px;
           font-size: 10px;
-          color: var(--delab-text-secondary, #777169);
+          color: var(--delab-text-tertiary, #8a8a90);
         }
         .delab-cm-page {
           flex: 1;
@@ -204,35 +216,40 @@ export function CommentsView({
           font: inherit;
           font-size: 10px;
           padding: 2px 5px;
-          border: 1px solid transparent;
+          border: none;
           border-radius: 4px;
           background: transparent;
-          color: var(--delab-text-secondary, #777169);
+          color: var(--delab-text-secondary, #57575e);
           cursor: pointer;
         }
         .delab-cm-ops button:hover {
-          color: var(--delab-text, #000);
-          border-color: var(--delab-border, #e5e5e5);
+          color: var(--delab-text, #141416);
+          background: var(--delab-sel, rgba(0,0,0,0.07));
+        }
+        .delab-cm-ops button.delab-cm-danger:hover {
+          color: var(--delab-danger, #e5484d);
         }
       `}</style>
 
       <div className="delab-cm-toolbar">
-        <button
-          type="button"
-          className="delab-cm-chip"
-          data-active={filter === 'all'}
-          onClick={() => setFilter('all')}
-        >
-          全部 {comments.length}
-        </button>
-        <button
-          type="button"
-          className="delab-cm-chip"
-          data-active={filter === 'open'}
-          onClick={() => setFilter('open')}
-        >
-          未解决 {openCount}
-        </button>
+        <div className="delab-cm-segments">
+          <button
+            type="button"
+            className="delab-cm-seg"
+            data-active={filter === 'all'}
+            onClick={() => setFilter('all')}
+          >
+            全部 {comments.length}
+          </button>
+          <button
+            type="button"
+            className="delab-cm-seg"
+            data-active={filter === 'open'}
+            onClick={() => setFilter('open')}
+          >
+            未解决 {openCount}
+          </button>
+        </div>
         <button type="button" className="delab-cm-copy" onClick={onCopyAll} disabled={!comments.length}>
           复制全部
         </button>
@@ -277,6 +294,7 @@ export function CommentsView({
                   </button>
                   <button
                     type="button"
+                    className="delab-cm-danger"
                     onClick={event => { event.stopPropagation(); onDelete(thread); }}
                   >
                     删除

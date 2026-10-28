@@ -1,5 +1,7 @@
 // DeLab Mode Switcher — 底部居中的模式切换器
 
+import { SANS, MONO } from './theme';
+
 export type DelabMode = 'browse' | 'inspect' | 'comment';
 
 interface ModeSwitcherOptions {
@@ -31,13 +33,13 @@ export class ModeSwitcher {
         display: none;
         align-items: center;
         gap: 2px;
-        padding: 4px;
+        padding: 3px;
         border-radius: 10px;
-        background: rgba(20, 22, 26, 0.92);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
-        backdrop-filter: blur(12px);
-        font-family: 'JetBrains Mono', 'SF Mono', Menlo, monospace;
+        background: var(--delab-glass-bg, rgba(23, 23, 24, 0.94));
+        border: 1px solid var(--delab-glass-border, rgba(255, 255, 255, 0.12));
+        box-shadow: var(--delab-shadow, 0 12px 32px -4px rgba(0, 0, 0, 0.4));
+        backdrop-filter: blur(16px);
+        font-family: ${SANS};
         font-size: 11px;
         line-height: 1;
         z-index: 2147483646;
@@ -50,44 +52,48 @@ export class ModeSwitcher {
         align-items: center;
         gap: 6px;
         padding: 6px 10px;
-        border-radius: 6px;
-        border: 1px solid transparent;
+        border-radius: 7px;
+        border: none;
         background: transparent;
-        color: #9aa1ab;
+        color: var(--delab-glass-dim, #a1a1a6);
         font: inherit;
+        font-weight: 500;
         cursor: pointer;
-        transition: color 0.12s ease, background 0.12s ease, border-color 0.12s ease;
+        transition: color 0.12s ease, background 0.12s ease, box-shadow 0.12s ease;
       }
       #delab-mode-switcher button:hover {
-        color: #f7f8f8;
-        background: rgba(255, 255, 255, 0.06);
+        color: var(--delab-glass-text, #ececee);
+        background: var(--delab-row-hover, rgba(255, 255, 255, 0.05));
       }
+      /* 激活态：反转色胶囊（对应站点 Export 按钮的黑白反转） */
       #delab-mode-switcher button[data-active='true'] {
-        color: #ffffff;
-        background: rgba(94, 106, 210, 0.22);
-        border-color: rgba(94, 106, 210, 0.65);
+        color: var(--delab-btn-text, #0b0b0c);
+        background: var(--delab-btn-bg, #ececee);
       }
       #delab-mode-switcher kbd {
-        font: inherit;
-        font-size: 10px;
-        color: #7b828c;
-        padding: 1px 4px;
-        border-radius: 3px;
-        border: 1px solid rgba(255, 255, 255, 0.14);
+        font-family: ${MONO};
+        font-size: 9px;
+        font-weight: 600;
+        color: var(--delab-glass-dim, #a1a1a6);
+        padding: 2px 4px;
+        border-radius: 4px;
+        border: 1px solid var(--delab-glass-border, rgba(255, 255, 255, 0.12));
       }
       #delab-mode-switcher button[data-active='true'] kbd {
-        color: #c7ccff;
-        border-color: rgba(150, 160, 255, 0.45);
+        color: inherit;
+        border-color: color-mix(in srgb, currentColor 35%, transparent);
       }
       #delab-mode-switcher .delab-switch-count {
         display: none;
-        min-width: 16px;
+        min-width: 15px;
         padding: 0 4px;
         border-radius: 999px;
-        background: rgba(94, 106, 210, 0.45);
-        color: #ffffff;
-        font-size: 10px;
-        line-height: 16px;
+        background: var(--delab-accent, #32f08c);
+        color: var(--delab-accent-contrast, #0b0b0c);
+        font-family: ${MONO};
+        font-size: 9px;
+        font-weight: 700;
+        line-height: 15px;
         text-align: center;
       }
       #delab-mode-switcher .delab-switch-count[data-visible='true'] {
@@ -96,16 +102,16 @@ export class ModeSwitcher {
       #delab-mode-switcher .delab-switch-divider {
         width: 1px;
         align-self: stretch;
-        margin: 2px 4px;
-        background: rgba(255, 255, 255, 0.1);
+        margin: 3px 3px;
+        background: var(--delab-glass-border, rgba(255, 255, 255, 0.12));
       }
       #delab-mode-switcher .delab-switch-close {
         padding: 6px 7px;
-        color: #6f7681;
+        color: var(--delab-glass-dim, #a1a1a6);
       }
       #delab-mode-switcher .delab-switch-close:hover {
-        color: #ff8b8b;
-        background: rgba(255, 107, 107, 0.12);
+        color: var(--delab-danger, #f65a5a);
+        background: color-mix(in srgb, var(--delab-danger, #f65a5a) 12%, transparent);
       }
     `;
     parent.appendChild(this.style);

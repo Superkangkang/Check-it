@@ -6,7 +6,7 @@ chrome.runtime.onInstalled.addListener(() => {
   chrome.contextMenus.removeAll(() => {
     chrome.contextMenus.create({
       id: 'delab-inspect',
-      title: 'DeLab 检查元素',
+      title: 'Check it 检查元素',
       contexts: ['page'],
     });
   });

@@ -4,7 +4,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { createRoot } from 'react-dom/client';
 import { FloatingPanel } from './components/FloatingPanel';
-import { ThemeProvider } from './theme-context';
+import { ThemeProvider, SANS } from './theme-context';
 import { ShadowHost } from './shadow-dom';
 import { StyleExtractor } from './style-extractor';
 import { EditSession } from './edit-session';

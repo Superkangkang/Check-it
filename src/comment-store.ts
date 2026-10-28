@@ -95,7 +95,7 @@ export function toMarkdown(threads: CommentThread[], pageUrl: string): string {
   const list = open.length ? open : threads;
 
   const lines: string[] = [
-    '# DeLab 走查评论',
+    '# Check it 走查评论',
     '',
     `页面：${pageUrl}`,
     `导出时间：${formatTime(Date.now())}`,

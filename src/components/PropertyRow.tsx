@@ -70,14 +70,14 @@ export function PropertyRow({ property, isColorGroup, colorFormat, onCommit, onR
       {property.modified && (
         <span style={{
           position: 'absolute', left: 0, top: 6, bottom: 6, width: 2,
-          background: 'var(--delab-accent, #5e6ad2)', borderRadius: 1,
+          background: 'var(--delab-accent, #32f08c)', borderRadius: 1,
         }} />
       )}
 
       <span
         title={property.modified ? `original: ${property.original ?? 'stylesheet value'}` : property.name}
         style={{
-          fontSize: 12, color: 'var(--delab-text-secondary, #888)',
+          fontSize: 11, color: 'var(--delab-text-secondary, #57575e)',
           width: 100, flexShrink: 0, lineHeight: '16px',
           overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
         }}

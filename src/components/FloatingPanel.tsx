@@ -5,7 +5,7 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import { createRoot } from 'react-dom/client';
 import { StyleGroup, BoxModel } from '../style-extractor';
 import type { CommentThread } from '../comment-store';
-import { ThemeProvider } from '../theme-context';
+import { ThemeProvider, SANS } from '../theme-context';
 import { Header } from './Header';
 import { ElementInfo } from './ElementInfo';
 import { BoxModelDiagram } from './BoxModelDiagram';
@@ -143,20 +143,19 @@ export function FloatingPanel({
           position: 'fixed', left: pos.left, top: pos.top,
           width: pos.width, height: pos.height,
           zIndex: 2147483646,
-          background: 'var(--delab-bg, #fdfcfc)',
-          color: 'var(--delab-text, #000)',
-          fontFamily: "'JetBrains Mono', 'SF Mono', Menlo, monospace",
-          fontSize: 14,
+          background: 'var(--delab-bg, #f5f5f6)',
+          color: 'var(--delab-text, #141416)',
+          fontFamily: SANS,
+          fontSize: 12,
           textAlign: 'left',
-          borderRadius: 10,
-          boxShadow: '0 4px 32px rgba(8, 9, 10, 0.6), 0 0 0 1px var(--delab-border, #23252a)',
-          border: '1px solid var(--delab-border, #e5e5e5)',
+          borderRadius: 12,
+          boxShadow: 'var(--delab-shadow, 0 12px 32px -4px rgba(0, 0, 0, 0.25))',
+          border: '1px solid var(--delab-border-strong, rgba(0, 0, 0, 0.16))',
           display: 'flex', flexDirection: 'column', overflow: 'hidden',
         }}
       >
         <Header
           onClose={onClose}
-          showDragHint
           onDragStart={onDragStart}
           modifiedCount={view === 'style' ? data?.modifiedCount ?? 0 : 0}
           onResetAll={view === 'style' ? onResetAll : undefined}
@@ -223,13 +222,13 @@ function ToggleBar({ showAll, onChange }: { showAll: boolean; onChange: (v: bool
     }}>
       <label style={{
         display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer',
-        fontSize: 11, color: 'var(--delab-text-secondary, #777169)',
+        fontSize: 11, color: 'var(--delab-text-secondary, #57575e)',
       }}>
         <input
           type="checkbox"
           checked={showAll}
           onChange={e => onChange(e.target.checked)}
-          style={{ accentColor: 'var(--delab-accent, #5e6ad2)' }}
+          style={{ accentColor: 'var(--delab-accent, #32f08c)' }}
         />
         Show all
       </label>

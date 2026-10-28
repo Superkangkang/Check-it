@@ -39,16 +39,16 @@ export function StylePanel({
           <div
             key={name}
             style={{
-              borderTop: first ? 'none' : '1px solid var(--delab-border, #23252a)',
+              borderTop: first ? 'none' : '1px solid var(--delab-border, rgba(0,0,0,0.08))',
               paddingBottom: 12,
               paddingTop: first ? 4 : 0,
             }}
           >
             {/* Group header */}
             <div style={{
-              padding: '10px 12px', fontSize: 11, fontWeight: 600,
-              textTransform: 'uppercase', letterSpacing: '0.5px',
-              color: 'var(--delab-accent, #5e6ad2)',
+              padding: '10px 12px 6px', fontSize: 12, fontWeight: 600,
+              letterSpacing: '-0.01em',
+              color: 'var(--delab-text, #141416)',
               display: 'flex', alignItems: 'center', gap: 8,
             }}>
               <span>{name}</span>
@@ -57,10 +57,10 @@ export function StylePanel({
                   value={colorFormat}
                   onChange={e => setColorFormat(e.target.value as ColorFormat)}
                   style={{
-                    marginLeft: 'auto', fontSize: 10, padding: '1px 4px',
-                    border: '1px solid var(--delab-border, #23252a)',
-                    borderRadius: 4, background: 'var(--delab-bg, #08090a)',
-                    color: 'var(--delab-text, #f7f8f8)', cursor: 'pointer',
+                    marginLeft: 'auto', fontFamily: 'inherit', fontSize: 10, padding: '2px 6px',
+                    border: '1px solid var(--delab-border, rgba(0,0,0,0.08))',
+                    borderRadius: 4, background: 'var(--delab-field-bg, #ffffff)',
+                    color: 'var(--delab-text-secondary, #57575e)', cursor: 'pointer', outline: 'none',
                   }}
                 >
                   <option value="hex">Hex</option>

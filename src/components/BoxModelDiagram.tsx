@@ -4,19 +4,20 @@ import { useState, useCallback } from 'react';
 import { BoxModel } from '../style-extractor';
 import { useTheme } from '../theme-context';
 
+// 四色系（呼应页面 overlay）：margin 琥珀 / border 绿 / padding 青 / content 蓝
+// 内层填充叠在外层之上，透明度控制较低避免混色发闷
 const CT_DARK = {
-  margin:  { bg: 'rgba(244,155,175,0.30)', text: '#c75070' },
-  border:  { bg: 'rgba(255,200,215,0.35)', text: '#d46080' },
-  padding: { bg: 'rgba(155,185,230,0.35)', text: '#5578b8' },
-  content: { bg: 'rgba(130,165,220,0.38)', text: '#4a6faa' },
+  margin:  { bg: 'rgba(245, 179, 68, 0.13)', text: '#f0bd5c' },
+  border:  { bg: 'rgba(50, 240, 140, 0.13)', text: '#72dda3' },
+  padding: { bg: 'rgba(56, 199, 222, 0.13)', text: '#6fd4e4' },
+  content: { bg: 'rgba(107, 155, 245, 0.17)', text: '#93b7f7' },
 };
 
-// darker text on lighter fills so numbers stay readable on a light panel
 const CT_LIGHT = {
-  margin:  { bg: 'rgba(230,120,150,0.22)', text: '#96304b' },
-  border:  { bg: 'rgba(240,160,185,0.32)', text: '#a13a58' },
-  padding: { bg: 'rgba(120,155,210,0.26)', text: '#2f5285' },
-  content: { bg: 'rgba(95,130,195,0.30)', text: '#24406b' },
+  margin:  { bg: 'rgba(214, 138, 30, 0.14)', text: '#8a5a14' },
+  border:  { bg: 'rgba(14, 182, 104, 0.15)', text: '#0a7245' },
+  padding: { bg: 'rgba(20, 160, 185, 0.15)', text: '#0e6377' },
+  content: { bg: 'rgba(80, 125, 230, 0.17)', text: '#2d4f9e' },
 };
 
 type Side = 'top' | 'bottom' | 'left' | 'right';
@@ -44,13 +45,13 @@ export function BoxModelDiagram({ bm, onCommit }: Props) {
         onClick={toggle}
         style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: '8px 12px', cursor: 'pointer', userSelect: 'none',
-          fontSize: 11, fontWeight: 600, textTransform: 'uppercase',
-          letterSpacing: '0.5px', color: 'var(--delab-accent, #5e6ad2)',
+          padding: '9px 12px', cursor: 'pointer', userSelect: 'none',
+          fontSize: 12, fontWeight: 600, letterSpacing: '-0.01em',
+          color: 'var(--delab-text, #141416)',
         }}
       >
         <span>Box Model</span>
-        <span style={{ fontSize: 14, lineHeight: 1 }}>{collapsed ? '+' : '\u2212'}</span>
+        <span style={{ fontSize: 13, lineHeight: 1, color: 'var(--delab-text-tertiary, #8a8a90)' }}>{collapsed ? '+' : '\u2212'}</span>
       </div>
       <div style={{
         padding: collapsed ? '0 12px' : '6px 12px 10px',
@@ -176,7 +177,7 @@ function ValueLabel({ value, color, style, cssProp, onCommit }: {
           fontSize: 9, fontWeight: 700, textAlign: 'center',
           fontFamily: 'inherit', color: 'var(--delab-text, #1a1a2e)',
           background: 'var(--delab-bg, #fff)',
-          border: '1px solid var(--delab-accent, #5e6ad2)',
+          border: '1px solid var(--delab-accent, #32f08c)',
           borderRadius: 2, outline: 'none', zIndex: 2,
           ...style,
         }}

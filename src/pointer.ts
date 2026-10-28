@@ -35,8 +35,9 @@ export class PointerCursor {
     `;
     this.node.innerHTML = `
       <svg width="${SIZE}" height="${SIZE}" viewBox="0 0 24 24">
-        <path d="${CURSOR_PATH}" fill="#0D99FF" stroke="#FFFFFF" stroke-width="2.2"
-          stroke-linejoin="round" stroke-linecap="round" paint-order="stroke"/>
+        <path d="${CURSOR_PATH}" stroke="#FFFFFF" stroke-width="2.2"
+          stroke-linejoin="round" stroke-linecap="round" paint-order="stroke"
+          style="fill: var(--delab-accent, #32f08c);"/>
       </svg>
     `;
     root.appendChild(this.node);

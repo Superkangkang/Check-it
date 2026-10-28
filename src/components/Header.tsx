@@ -5,28 +5,28 @@ import { SunIcon, MoonIcon, CloseIcon } from './Icon';
 
 interface HeaderProps {
   onClose: () => void;
-  showDragHint?: boolean;
   onDragStart?: (e: React.MouseEvent) => void;
   /** Number of edited properties on the current element */
   modifiedCount?: number;
   onResetAll?: () => void;
 }
 
-const btnStyle: React.CSSProperties = {
-  background: 'none',
-  border: '1px solid var(--delab-border, #23252a)',
+const iconBtn: React.CSSProperties = {
+  appearance: 'none',
+  background: 'transparent',
+  border: 'none',
   borderRadius: 6,
   cursor: 'pointer',
-  fontSize: 14,
-  padding: '3px 6px',
-  color: 'var(--delab-text, #f7f8f8)',
+  padding: 5,
+  color: 'var(--delab-text-secondary, #57575e)',
   lineHeight: 1,
   display: 'inline-flex',
   alignItems: 'center',
   justifyContent: 'center',
+  transition: 'background 0.12s ease, color 0.12s ease',
 };
 
-export function Header({ onClose, showDragHint, onDragStart, modifiedCount = 0, onResetAll }: HeaderProps) {
+export function Header({ onClose, onDragStart, modifiedCount = 0, onResetAll }: HeaderProps) {
   const { isDark, toggle } = useTheme();
 
   return (
@@ -34,46 +34,51 @@ export function Header({ onClose, showDragHint, onDragStart, modifiedCount = 0, 
       onMouseDown={onDragStart}
       style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '8px 12px', borderBottom: '1px solid var(--delab-border, #e8e8e8)',
+        padding: '10px 12px', borderBottom: '1px solid var(--delab-border, rgba(0,0,0,0.08))',
         flexShrink: 0, userSelect: 'none',
         cursor: onDragStart ? 'grab' : 'default',
       }}
     >
-      {/* Brand */}
+      {/* Brand：品牌绿方块 + 字标 */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, pointerEvents: 'none' }}>
         <span style={{
           display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-          width: 26, height: 26, background: 'var(--delab-accent, #5e6ad2)',
-          color: '#fff', borderRadius: 6, fontSize: 12, fontWeight: 800,
+          width: 20, height: 20, background: 'var(--delab-accent, #32f08c)',
+          color: 'var(--delab-accent-contrast, #0b0b0c)', borderRadius: 6,
+          fontSize: 11, fontWeight: 800, letterSpacing: '-0.02em',
         }}>
-          DL
+          C
         </span>
-        <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--delab-text, #1a1a2e)' }}>
-          DeLab
+        <span style={{ fontSize: 13, fontWeight: 600, letterSpacing: '-0.01em', color: 'var(--delab-text, #141416)' }}>
+          Check it
         </span>
-        {showDragHint && (
-          <span style={{ fontSize: 10, color: 'var(--delab-text-secondary, #aaa)', marginLeft: 8 }}>
-            drag to move
-          </span>
-        )}
       </div>
 
       {/* Actions */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
         {modifiedCount > 0 && onResetAll && (
           <button
             onClick={onResetAll}
             title="Revert all edits on this element"
-            style={{ ...btnStyle, fontSize: 11, padding: '4px 8px', gap: 4 }}
+            style={{
+              ...iconBtn, gap: 4, padding: '4px 8px', fontSize: 11,
+              color: 'var(--delab-accent, #32f08c)',
+            }}
           >
             Reset {modifiedCount}
           </button>
         )}
-        <button onClick={toggle} title="Toggle theme" style={btnStyle}>
-          {isDark ? <SunIcon size={16} /> : <MoonIcon size={16} />}
+        <button onClick={toggle} title="Toggle theme" style={iconBtn}
+          onMouseEnter={e => { e.currentTarget.style.background = 'var(--delab-row-hover, rgba(0,0,0,0.045))'; }}
+          onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
+        >
+          {isDark ? <SunIcon size={15} /> : <MoonIcon size={15} />}
         </button>
-        <button onClick={onClose} title="Close" style={btnStyle}>
-          <CloseIcon size={16} />
+        <button onClick={onClose} title="Close" style={iconBtn}
+          onMouseEnter={e => { e.currentTarget.style.background = 'var(--delab-row-hover, rgba(0,0,0,0.045))'; }}
+          onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
+        >
+          <CloseIcon size={15} />
         </button>
       </div>
     </div>

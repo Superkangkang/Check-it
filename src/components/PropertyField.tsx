@@ -25,15 +25,15 @@ interface PropertyFieldProps {
   onCommit: (prop: string, value: string) => boolean;
 }
 
-const FIELD_BG = 'var(--delab-field-bg, rgba(127,127,127,0.08))';
-const FIELD_BG_HOVER = 'var(--delab-field-hover, rgba(127,127,127,0.14))';
+const FIELD_BG = 'var(--delab-field-bg, #ffffff)';
+const FIELD_BG_HOVER = 'var(--delab-field-hover, #f3f3f5)';
 
 const baseField: React.CSSProperties = {
   width: '100%', boxSizing: 'border-box',
-  fontFamily: 'inherit', fontSize: 12, lineHeight: '16px',
-  height: 24, padding: '0 6px', borderRadius: 4,
+  fontFamily: "'JetBrains Mono', 'SF Mono', Menlo, monospace", fontSize: 11, lineHeight: '16px',
+  height: 24, padding: '0 6px', borderRadius: 6,
   background: FIELD_BG,
-  color: 'var(--delab-text, #1a1a2e)',
+  color: 'var(--delab-text, #141416)',
   border: '1px solid transparent',
   outline: 'none', cursor: 'text', textAlign: 'left',
 };
@@ -42,7 +42,7 @@ function PrefixLabel({ children }: { children: React.ReactNode }) {
   return (
     <span style={{
       position: 'absolute', left: 5, top: 0, height: 24, display: 'flex', alignItems: 'center',
-      fontSize: 9, lineHeight: 1, color: 'var(--delab-text-secondary, #8a8f98)',
+      fontSize: 9, lineHeight: 1, color: 'var(--delab-text-tertiary, #8a8a90)',
       pointerEvents: 'none', zIndex: 1,
     }}>
       {children}
@@ -119,11 +119,11 @@ export function PropertyField({ spec, onCommit }: PropertyFieldProps) {
   };
 
   const borderColor = invalid
-    ? '#e5484d'
+    ? 'var(--delab-danger, #e5484d)'
     : focused
-      ? 'var(--delab-accent, #5e6ad2)'
+      ? 'var(--delab-accent, #32f08c)'
       : hover
-        ? 'var(--delab-field-border, rgba(127,127,127,0.30))'
+        ? 'var(--delab-field-border, rgba(0,0,0,0.12))'
         : 'transparent';
 
   const fieldStyle: React.CSSProperties = {
@@ -154,7 +154,7 @@ export function PropertyField({ spec, onCommit }: PropertyFieldProps) {
           width="8" height="8" viewBox="0 0 8 8" aria-hidden
           style={{
             position: 'absolute', right: 6, top: '50%', marginTop: -4,
-            pointerEvents: 'none', color: 'var(--delab-text-secondary, #8a8f98)',
+            pointerEvents: 'none', color: 'var(--delab-text-tertiary, #8a8a90)',
           }}
         >
           <path d="M1 3l3 3 3-3" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
@@ -208,7 +208,7 @@ export function PropertyField({ spec, onCommit }: PropertyFieldProps) {
           readOnly
           value={spec.value}
           title={spec.value}
-          style={{ ...baseField, background: 'transparent', cursor: 'default', color: 'var(--delab-text-secondary, #8a8f98)' }}
+          style={{ ...baseField, background: 'transparent', cursor: 'default', color: 'var(--delab-text-secondary, #57575e)' }}
         />
       </div>
     );

@@ -1,5 +1,7 @@
 // DeLab Element Info - React component
 
+import { MONO } from '../theme-context';
+
 interface ElementInfoProps {
   tagName: string;
   id: string;
@@ -13,34 +15,6 @@ function esc(s: string): string {
   return d.innerHTML;
 }
 
-const tagStyle: React.CSSProperties = {
-  display: 'inline-block',
-  border: '1px solid var(--delab-accent, #5e6ad2)',
-  color: 'var(--delab-accent, #5e6ad2)',
-  padding: '2px 8px',
-  borderRadius: 4,
-  fontSize: 13,
-  fontWeight: 600,
-  marginRight: 8,
-};
-
-const idStyle: React.CSSProperties = {
-  display: 'inline',
-  color: 'var(--delab-accent, #5e6ad2)',
-  fontSize: 13,
-  fontWeight: 600,
-  marginRight: 8,
-  wordBreak: 'break-all',
-};
-
-const clsStyle: React.CSSProperties = {
-  display: 'inline',
-  color: 'var(--delab-text-secondary, #888)',
-  fontSize: 13,
-  marginRight: 4,
-  wordBreak: 'break-all',
-};
-
 export function ElementInfo({ tagName, id, classes, visible }: ElementInfoProps) {
   if (!visible) return null;
 
@@ -49,13 +23,28 @@ export function ElementInfo({ tagName, id, classes, visible }: ElementInfoProps)
   return (
     <div style={{
       padding: '8px 12px',
-      borderBottom: '1px solid var(--delab-border, #e8e8e8)',
-      lineHeight: 1.5,
+      borderBottom: '1px solid var(--delab-border, rgba(0,0,0,0.08))',
+      fontFamily: MONO,
+      fontSize: 11,
+      lineHeight: 1.6,
+      display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 4,
     }}>
-      <span style={tagName ? tagStyle : undefined}>{tagName}</span>
-      {id && <span style={idStyle} dangerouslySetInnerHTML={{ __html: `#${esc(id)}` }} />}
+      {tagName && (
+        <span style={{
+          display: 'inline-block',
+          background: 'var(--delab-accent-soft, rgba(50,240,140,0.14))',
+          color: 'var(--delab-accent, #32f08c)',
+          padding: '2px 6px',
+          borderRadius: 4,
+          fontWeight: 600,
+          marginRight: 2,
+        }}>
+          {tagName}
+        </span>
+      )}
+      {id && <span style={{ color: 'var(--delab-text, #141416)', fontWeight: 600, wordBreak: 'break-all' }} dangerouslySetInnerHTML={{ __html: `#${esc(id)}` }} />}
       {clsList.map(cls => (
-        <span key={cls} style={clsStyle} dangerouslySetInnerHTML={{ __html: `.${esc(cls)}` }} />
+        <span key={cls} style={{ color: 'var(--delab-text-secondary, #57575e)', wordBreak: 'break-all' }} dangerouslySetInnerHTML={{ __html: `.${esc(cls)}` }} />
       ))}
     </div>
   );

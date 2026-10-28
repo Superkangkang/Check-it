@@ -26,8 +26,9 @@ export class GlassLabel {
       pointer-events: none;
       z-index: 2147483641;
       font-family: 'JetBrains Mono', 'SF Mono', Menlo, monospace;
-      font-size: 11px;
-      font-weight: 400;
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.02em;
       line-height: 1;
       height: ${HEIGHT}px;
       display: none;
@@ -37,8 +38,8 @@ export class GlassLabel {
       white-space: nowrap;
       opacity: 0;
       transition: opacity 0.15s ease;
-      background: var(--delab-accent, #5e6ad2);
-      color: #fff;
+      background: var(--delab-accent, #32f08c);
+      color: var(--delab-accent-contrast, #0b0b0c);
       box-shadow: 0 4px 16px rgba(0,0,0,0.2);
     `;
     this.parent.appendChild(el);

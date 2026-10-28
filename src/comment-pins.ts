@@ -114,10 +114,10 @@ export class CommentPins {
       width: ${PIN_SIZE}px;
       height: ${PIN_SIZE}px;
       padding: 0;
-      border: 2px solid var(--delab-bg, #fff);
+      border: 2px solid rgba(255, 255, 255, 0.9);
       border-radius: ${PIN_SIZE / 2}px ${PIN_SIZE / 2}px 2px ${PIN_SIZE / 2}px;
-      background: var(--delab-accent, #5e6ad2);
-      color: #fff;
+      background: var(--delab-accent, #32f08c);
+      color: var(--delab-accent-contrast, #0b0b0c);
       font-family: 'JetBrains Mono', monospace;
       font-size: 11px;
       font-weight: 700;
@@ -143,9 +143,9 @@ export class CommentPins {
     const { node, input } = record;
     node.textContent = String(input.index);
     node.style.background = input.active
-      ? 'var(--delab-accent, #5e6ad2)'
-      : 'color-mix(in srgb, var(--delab-accent, #5e6ad2) 70%, #000)';
-    node.style.opacity = input.active ? '1' : '0.85';
+      ? 'var(--delab-accent, #32f08c)'
+      : 'color-mix(in srgb, var(--delab-accent, #32f08c) 72%, #0b0b0c)';
+    node.style.opacity = input.active ? '1' : '0.88';
     node.style.transform = input.active ? 'scale(1.15)' : 'scale(1)';
   }
 

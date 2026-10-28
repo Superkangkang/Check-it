@@ -2,6 +2,7 @@
 
 import { CommentThread } from './comment-store';
 import { ElementIdentity, summarizeElement } from './element-identity';
+import { SANS, MONO } from './theme';
 
 export interface PopoverActions {
   onSubmit: (body: string) => void;
@@ -44,12 +45,12 @@ export class CommentPopover {
       width: ${WIDTH}px;
       display: none;
       flex-direction: column;
-      background: var(--delab-bg, #fff);
-      color: var(--delab-text, #000);
-      border: 1px solid var(--delab-border, #e5e5e5);
-      border-radius: 10px;
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.38);
-      font-family: 'JetBrains Mono', monospace;
+      background: var(--delab-bg, #f5f5f6);
+      color: var(--delab-text, #141416);
+      border: 1px solid var(--delab-border-strong, rgba(0, 0, 0, 0.16));
+      border-radius: 12px;
+      box-shadow: var(--delab-shadow, 0 12px 32px -4px rgba(0, 0, 0, 0.25));
+      font-family: ${SANS};
       z-index: 2147483646;
       overflow: hidden;
     `;
@@ -61,13 +62,14 @@ export class CommentPopover {
       justify-content: space-between;
       gap: 8px;
       padding: 8px 10px;
-      border-bottom: 1px solid var(--delab-border, #e5e5e5);
+      border-bottom: 1px solid var(--delab-border, rgba(0, 0, 0, 0.08));
     `;
 
     this.title = document.createElement('span');
     this.title.style.cssText = `
-      font-size: 11px;
-      color: var(--delab-accent, #5e6ad2);
+      font-family: ${MONO};
+      font-size: 10px;
+      color: var(--delab-text-tertiary, #8a8a90);
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
@@ -112,8 +114,8 @@ export class CommentPopover {
       border: none;
       border-radius: 0;
       background: transparent;
-      color: var(--delab-text, #000);
-      font-family: 'JetBrains Mono', monospace;
+      color: var(--delab-text, #141416);
+      font-family: ${SANS};
       font-size: 12px;
       line-height: 1.5;
       outline: none;
@@ -148,7 +150,7 @@ export class CommentPopover {
   openThread(target: Element, thread: CommentThread, index: number) {
     this.mount(target, thread.identity);
     this.header.style.display = 'flex';
-    this.card.style.border = '1px solid var(--delab-border, #e5e5e5)';
+    this.card.style.border = '1px solid var(--delab-border-strong, rgba(0, 0, 0, 0.16))';
     this.body.style.padding = '10px';
     this.body.replaceChildren();
 
@@ -158,7 +160,7 @@ export class CommentPopover {
 
     const meta = document.createElement('div');
     meta.textContent = `#${index} · ${formatTime(thread.createdAt)}${thread.resolved ? ' · 已解决' : ''}`;
-    meta.style.cssText = 'margin-top: 6px; font-size: 10px; color: var(--delab-text-secondary, #777169);';
+    meta.style.cssText = 'margin-top: 6px; font-size: 10px; color: var(--delab-text-tertiary, #8a8a90);';
 
     const footer = document.createElement('div');
     footer.style.cssText = 'display: flex; justify-content: flex-end; gap: 6px; margin-top: 8px;';
@@ -184,9 +186,9 @@ export class CommentPopover {
         max-height: 132px;
         object-fit: cover;
         margin-top: 8px;
-        border-radius: 6px;
-        border: 1px solid var(--delab-border, #e5e5e5);
-        background: var(--delab-field-bg, #f2f0ee);
+        border-radius: 8px;
+        border: 1px solid var(--delab-border, rgba(0, 0, 0, 0.08));
+        background: var(--delab-field-bg, #ffffff);
         cursor: zoom-in;
       `;
       shot.addEventListener('click', event => {
@@ -284,14 +286,16 @@ export class CommentPopover {
     button.type = 'button';
     button.textContent = label;
     button.style.cssText = `
-      padding: 4px 10px;
+      padding: 5px 10px;
       border-radius: 6px;
-      font-family: 'JetBrains Mono', monospace;
+      font-family: ${SANS};
       font-size: 11px;
+      font-weight: 500;
+      line-height: 1;
       cursor: pointer;
-      border: 1px solid ${primary ? 'transparent' : 'var(--delab-border, #e5e5e5)'};
-      background: ${primary ? 'var(--delab-accent, #5e6ad2)' : 'none'};
-      color: ${primary ? '#fff' : 'var(--delab-text, #000)'};
+      border: 1px solid ${primary ? 'transparent' : 'var(--delab-border-strong, rgba(0, 0, 0, 0.16))'};
+      background: ${primary ? 'var(--delab-btn-bg, #141416)' : 'transparent'};
+      color: ${primary ? 'var(--delab-btn-text, #ffffff)' : 'var(--delab-text, #141416)'};
     `;
     return button;
   }

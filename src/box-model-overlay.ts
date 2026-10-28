@@ -2,12 +2,14 @@
 
 import { StyleExtractor } from './style-extractor';
 
-// 粉蓝配色：填充极淡，线框清晰
+// 多色系线框（DevTools 惯例）：margin 琥珀 / border 品牌绿 / padding 青 / content 蓝
+// 填充为中性黑渐变，content 层即黑色透明遮罩
+const tint = (color: string, pct: number) => `color-mix(in srgb, ${color} ${pct}%, transparent)`;
 const COLORS = {
-  margin:  { bg: 'rgba(244, 155, 175, 0.05)',  border: 'rgba(244, 155, 175, 0.60)' },
-  border:  { bg: 'rgba(255, 200, 215, 0.06)',  border: 'rgba(255, 200, 215, 0.55)' },
-  padding: { bg: 'rgba(155, 185, 230, 0.06)',  border: 'rgba(155, 185, 230, 0.55)' },
-  content: { bg: 'rgba(130, 165, 220, 0.07)',  border: 'rgba(130, 165, 220, 0.65)' },
+  margin:  { bg: 'rgba(0, 0, 0, 0.02)', border: tint('#e8a33d', 50) },
+  border:  { bg: 'rgba(0, 0, 0, 0.03)', border: tint('var(--delab-accent, #32f08c)', 55) },
+  padding: { bg: 'rgba(0, 0, 0, 0.04)', border: tint('#38c7de', 55) },
+  content: { bg: 'rgba(0, 0, 0, 0.24)', border: tint('#6b9bf5', 75) },
 };
 
 type BoxLayer = 'margin' | 'border' | 'padding' | 'content';

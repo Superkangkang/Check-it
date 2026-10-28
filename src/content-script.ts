@@ -27,6 +27,7 @@ import {
 } from './comment-store';
 import { ElementIdentity, describeElement } from './element-identity';
 import { captureElementSnapshot } from './snapshot';
+import { ThemeManager } from './theme';
 
 class DelabApp {
   private stateManager: InspectStateManager;
@@ -68,12 +69,14 @@ class DelabApp {
   constructor() {
     this.stateManager = new InspectStateManager();
     this.shadowHost = new ShadowHost();
+    // 先于任何浮层把主题变量写到页面上，避免切换器等先用错误的 fallback 闪一下
+    new ThemeManager();
     const root = this.shadowHost.getRoot();
     this.boxModelOverlay = new BoxModelOverlay(root);
     this.glassLabel = new GlassLabel(root);
     this.hoverFinder = new Viewfinder(root);
-    // 选中态用更深一级的紫色，和悬停态区分开
-    this.selectionFinder = new Viewfinder(root, '#3b4590', 'delab-selection-frame');
+    // 选中态用不透明的品牌绿，和半透明悬停态区分开
+    this.selectionFinder = new Viewfinder(root, 'var(--delab-accent, #32f08c)', 'delab-selection-frame', 1);
     this.pins = new CommentPins(root);
     // 大图预览要压在最上层，先于指针创建，保证自定义指针仍可见
     this.lightbox = new Lightbox(root);
@@ -492,10 +495,10 @@ class DelabApp {
         transform: translateX(-50%);
         padding: 8px 14px;
         border-radius: 8px;
-        background: var(--delab-glass-bg, rgba(15, 16, 17, 0.9));
-        color: var(--delab-glass-text, #fff);
+        background: var(--delab-glass-bg, rgba(23, 23, 24, 0.94));
+        color: var(--delab-glass-text, #ececee);
         border: 1px solid var(--delab-glass-border, rgba(255, 255, 255, 0.12));
-        font-family: 'JetBrains Mono', monospace;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
         font-size: 12px;
         z-index: 2147483646;
         pointer-events: none;

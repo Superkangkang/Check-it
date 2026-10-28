@@ -8,8 +8,9 @@ export class Viewfinder {
 
   constructor(
     parent: ShadowRoot | HTMLElement,
-    color = 'var(--delab-accent, #5e6ad2)',
-    id = 'delab-hover-frame'
+    color = 'var(--delab-accent, #32f08c)',
+    id = 'delab-hover-frame',
+    private opacity = 0.6
   ) {
     this.parent = parent;
     this.create(color, id);
@@ -77,7 +78,7 @@ export class Viewfinder {
       this.wireframe.style.width = `${r.width}px`;
       this.wireframe.style.height = `${r.height}px`;
       this.wireframe.style.display = 'block';
-      this.wireframe.style.opacity = '0.7';
+      this.wireframe.style.opacity = String(this.opacity);
     } catch {
       this.hide();
     }

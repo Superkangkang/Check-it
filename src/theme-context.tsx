@@ -1,8 +1,11 @@
 // DeLab React 主题 Context
 
-import { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import { createContext, useContext, useState, useCallback } from 'react';
 import type { ReactNode } from 'react';
 import { ThemeManager } from './theme';
+
+// 字体常量透传给 React 组件使用
+export { SANS, MONO } from './theme';
 
 interface ThemeContextValue {
   theme: 'light' | 'dark';

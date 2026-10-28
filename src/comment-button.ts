@@ -32,19 +32,32 @@ export class CommentButton {
       width: ${SIZE}px;
       height: ${SIZE}px;
       padding: 0;
-      border: 1px solid rgba(255, 255, 255, 0.14);
+      border: 1px solid var(--delab-glass-border, rgba(255, 255, 255, 0.12));
       border-radius: 50%;
-      background: rgba(14, 15, 18, 0.98);
-      color: #fff;
+      background: var(--delab-glass-bg, rgba(23, 23, 24, 0.94));
+      color: var(--delab-glass-text, #ececee);
       line-height: 1;
       pointer-events: auto;
       z-index: 2147483644;
-      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+      box-shadow: var(--delab-shadow, 0 8px 24px rgba(0, 0, 0, 0.35));
+      backdrop-filter: blur(12px);
+      transition: color 0.12s ease, background 0.12s ease;
     `;
     this.node.addEventListener('click', event => {
       event.preventDefault();
       event.stopPropagation();
       this.onClick();
+    });
+    // 悬停时点亮品牌绿
+    this.node.addEventListener('mouseenter', () => {
+      this.node.style.background = 'var(--delab-accent, #32f08c)';
+      this.node.style.color = 'var(--delab-accent-contrast, #0b0b0c)';
+      this.node.style.borderColor = 'transparent';
+    });
+    this.node.addEventListener('mouseleave', () => {
+      this.node.style.background = 'var(--delab-glass-bg, rgba(23, 23, 24, 0.94))';
+      this.node.style.color = 'var(--delab-glass-text, #ececee)';
+      this.node.style.borderColor = 'var(--delab-glass-border, rgba(255, 255, 255, 0.12))';
     });
     root.appendChild(this.node);
 
