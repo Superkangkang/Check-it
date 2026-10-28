@@ -4,17 +4,17 @@ import { useState, useCallback } from 'react';
 import { BoxModel } from '../style-extractor';
 import { useTheme } from '../theme-context';
 
-// 四色系（呼应页面 overlay）：margin 琥珀 / border 绿 / padding 青 / content 蓝
+// 色系与页面 overlay 保持一致：margin 品红 / border 绿 / padding 青 / content 蓝
 // 内层填充叠在外层之上，透明度控制较低避免混色发闷
 const CT_DARK = {
-  margin:  { bg: 'rgba(245, 179, 68, 0.13)', text: '#f0bd5c' },
+  margin:  { bg: 'rgba(244, 114, 182, 0.13)', text: '#f472b6' },
   border:  { bg: 'rgba(50, 240, 140, 0.13)', text: '#72dda3' },
   padding: { bg: 'rgba(56, 199, 222, 0.13)', text: '#6fd4e4' },
   content: { bg: 'rgba(107, 155, 245, 0.17)', text: '#93b7f7' },
 };
 
 const CT_LIGHT = {
-  margin:  { bg: 'rgba(214, 138, 30, 0.14)', text: '#8a5a14' },
+  margin:  { bg: 'rgba(219, 39, 119, 0.14)', text: '#be185d' },
   border:  { bg: 'rgba(14, 182, 104, 0.15)', text: '#0a7245' },
   padding: { bg: 'rgba(20, 160, 185, 0.15)', text: '#0e6377' },
   content: { bg: 'rgba(80, 125, 230, 0.17)', text: '#2d4f9e' },

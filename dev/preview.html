@@ -118,6 +118,34 @@
 
   #delab-preview-bar button:hover { color: #fff; border-color: #3a3e45; }
   #delab-preview-bar button.active { color: #fff; border-color: #5e6ad2; background: rgba(94, 106, 210, 0.18); }
+
+  .legend { font-size: 13px; color: #6f7681; margin: 40px 0 16px; line-height: 1.9; }
+  .legend b { font-weight: 600; }
+
+  .demo-wrap { display: flex; flex-direction: column; max-width: 420px; }
+  .demo {
+    background: #24272d;
+    color: #c7ccd3;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    border-radius: 6px;
+    min-height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  /* 各层都拉开：琥珀/青/蓝紫三段色带可以同时看到（border 不绘制） */
+  .demo-all { margin: 24px; border: 8px solid #3a3f4a; padding: 20px; }
+  /* 只有 margin：没有 border / padding，padding 与 content 重合 */
+  .demo-margin { margin: 24px 40px; }
+  /* 只有 padding：没有 margin，margin 色带消失 */
+  .demo-padding { padding: 24px; }
+  /* 只有 border：不绘制色带，只在 padding 外留出一圈空隙 */
+  .demo-border { border: 10px solid #3a3f4a; }
+
+  .c-margin { color: #e879f9; }
+  .c-padding { color: #38c7de; }
+  .c-content { color: #6b9bf5; }
 </style>
 </head>
 <body>
@@ -135,6 +163,20 @@
     </article>
 
     <button class="btn" data-mock="button">Primary action</button>
+
+    <p class="legend">
+      盒子模型色带（填充，border 不绘制）<br />
+      <b class="c-margin">品红 = margin 外边距</b> ·
+      <b class="c-padding">青 = padding 内边距</b> ·
+      <b class="c-content">蓝紫 = content 内容区</b>
+    </p>
+
+    <div class="demo-wrap">
+      <div class="demo demo-all" data-mock="box-all">margin 24 / border 8 / padding 20</div>
+      <div class="demo demo-margin" data-mock="box-margin">只有 margin</div>
+      <div class="demo demo-padding" data-mock="box-padding">只有 padding</div>
+      <div class="demo demo-border" data-mock="box-border">只有 border</div>
+    </div>
   </div>
 
   <div id="delab-preview-bar">
@@ -142,6 +184,10 @@
     <button class="active" data-target="title" onclick="window.dispatchEvent(new CustomEvent('delab-preview', { detail: 'title' }))">title</button>
     <button data-target="card" onclick="window.dispatchEvent(new CustomEvent('delab-preview', { detail: 'card' }))">card</button>
     <button data-target="button" onclick="window.dispatchEvent(new CustomEvent('delab-preview', { detail: 'button' }))">button</button>
+    <button data-target="box-all" onclick="window.dispatchEvent(new CustomEvent('delab-preview', { detail: 'box-all' }))">box:all</button>
+    <button data-target="box-margin" onclick="window.dispatchEvent(new CustomEvent('delab-preview', { detail: 'box-margin' }))">margin</button>
+    <button data-target="box-padding" onclick="window.dispatchEvent(new CustomEvent('delab-preview', { detail: 'box-padding' }))">padding</button>
+    <button data-target="box-border" onclick="window.dispatchEvent(new CustomEvent('delab-preview', { detail: 'box-border' }))">border</button>
     <button onclick="window.dispatchEvent(new CustomEvent('delab-preview', { detail: 'reset' }))">Reset all</button>
   </div>
 

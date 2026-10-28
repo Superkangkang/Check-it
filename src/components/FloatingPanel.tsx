@@ -13,7 +13,7 @@ import { StylePanel } from './StylePanel';
 import { CommentsView } from './CommentsView';
 import { InspectIcon } from './Icon';
 
-const DEFAULT_WIDTH = 420;
+const DEFAULT_WIDTH = 360;
 const MIN_WIDTH = 280;
 const MIN_HEIGHT = 300;
 

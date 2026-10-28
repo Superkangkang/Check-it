@@ -10,6 +10,7 @@ import { StyleExtractor } from './style-extractor';
 import { EditSession } from './edit-session';
 import { CommentPopover } from './comment-popover';
 import { CommentButton } from './comment-button';
+import { BoxModelOverlay } from './box-model-overlay';
 import { PointerCursor } from './pointer';
 import { CommentThread, toMarkdown } from './comment-store';
 import { describeElement } from './element-identity';
@@ -61,8 +62,23 @@ function App() {
 
   const popoverRef = useRef<CommentPopover | null>(null);
   const buttonRef = useRef<CommentButton | null>(null);
+  const overlayRef = useRef<BoxModelOverlay | null>(null);
 
-  const refresh = (el: Element = targets[index]) => setData(payloadFor(el, sessionOf(el)));
+  const refresh = (el: Element = targets[index]) => {
+    setData(payloadFor(el, sessionOf(el)));
+    overlayRef.current?.show(el);
+  };
+
+  // 盒子模型浮层：预览页常驻显示，方便对照虚线颜色
+  useEffect(() => {
+    const overlay = new BoxModelOverlay(host.getRoot());
+    overlayRef.current = overlay;
+    overlay.show(targets[0]);
+    return () => {
+      overlay.destroy();
+      overlayRef.current = null;
+    };
+  }, [targets]);
 
   // 页内指针 + 评论按钮 + 评论弹层（与插件行为一致）
   useEffect(() => {
@@ -140,9 +156,10 @@ function App() {
     return () => document.removeEventListener('keydown', onKey, true);
   }, []);
 
-  // 切换 mock 元素时把评论按钮挂到当前元素下方
+  // 切换 mock 元素时把评论按钮和盒子模型浮层挂到当前元素
   useEffect(() => {
     buttonRef.current?.show(targets[index]);
+    overlayRef.current?.show(targets[index]);
   }, [index, targets]);
 
   // 预览条是页面里的普通 DOM，通过自定义事件驱动

@@ -1,22 +1,39 @@
-// DeLab Box Model Overlay — 低透明度线框层叠
+// DeLab Box Model Overlay — 分层色带填充（DevTools 惯例）
+// margin 琥珀 / padding 青 / content 蓝紫（border 不展示）
+// 每层只填充自己那一圈（border-width 即色带厚度），各层互不叠加，避免颜色混浊
 
 import { StyleExtractor } from './style-extractor';
 
-// 多色系线框（DevTools 惯例）：margin 琥珀 / border 品牌绿 / padding 青 / content 蓝
-// 填充为中性黑渐变，content 层即黑色透明遮罩
-const tint = (color: string, pct: number) => `color-mix(in srgb, ${color} ${pct}%, transparent)`;
+// 先把色相压向黑色再做低透明度叠加，深色页面上不发灰
+const tint = (color: string, pct: number) =>
+  `color-mix(in srgb, color-mix(in srgb, ${color} 42%, #000) ${pct}%, transparent)`;
 const COLORS = {
-  margin:  { bg: 'rgba(0, 0, 0, 0.02)', border: tint('#e8a33d', 50) },
-  border:  { bg: 'rgba(0, 0, 0, 0.03)', border: tint('var(--delab-accent, #32f08c)', 55) },
-  padding: { bg: 'rgba(0, 0, 0, 0.04)', border: tint('#38c7de', 55) },
-  content: { bg: 'rgba(0, 0, 0, 0.24)', border: tint('#6b9bf5', 75) },
+  margin: { fill: tint('#e879f9', 26) },
+  padding: { fill: tint('#38c7de', 24) },
+  content: { fill: tint('#6b9bf5', 18) },
 };
 
-type BoxLayer = 'margin' | 'border' | 'padding' | 'content';
+type BoxLayer = 'margin' | 'padding' | 'content';
+type Box = { top: number; left: number; width: number; height: number };
+type Ring = { top: number; right: number; bottom: number; left: number };
+
+const clamp = (v: number, max: number) => Math.max(0, Math.min(v, max));
+
+/** 外框向内收 ring */
+const inset = (box: Box, ring: Ring): Box => ({
+  top: box.top + ring.top,
+  left: box.left + ring.left,
+  width: box.width - ring.left - ring.right,
+  height: box.height - ring.top - ring.bottom,
+});
+
+/** 外框向外扩 ring */
+const outset = (box: Box, ring: Ring): Box => inset(box, {
+  top: -ring.top, right: -ring.right, bottom: -ring.bottom, left: -ring.left,
+});
 
 export class BoxModelOverlay {
   private layers: Record<BoxLayer, HTMLElement>;
-  private lines: Record<BoxLayer, HTMLElement>;
   private extractor: StyleExtractor;
   private rafId: number | null = null;
   private parent: ShadowRoot | HTMLElement;
@@ -26,44 +43,32 @@ export class BoxModelOverlay {
   constructor(parent: ShadowRoot | HTMLElement) {
     this.parent = parent;
     this.extractor = new StyleExtractor();
-    const result = this.createLayers();
-    this.layers = result.bg;
-    this.lines = result.line;
+    this.layers = this.createLayers();
     window.addEventListener('scroll', this.schedule, true);
     window.addEventListener('resize', this.schedule);
   }
 
-  private createLayers(): { bg: Record<BoxLayer, HTMLElement>; line: Record<BoxLayer, HTMLElement> } {
-    const bg: Partial<Record<BoxLayer, HTMLElement>> = {};
-    const line: Partial<Record<BoxLayer, HTMLElement>> = {};
-    const order = ['margin', 'border', 'padding', 'content'] as BoxLayer[];
+  private createLayers(): Record<BoxLayer, HTMLElement> {
+    const layers = {} as Record<BoxLayer, HTMLElement>;
+    const order = ['margin', 'padding', 'content'] as BoxLayer[];
 
     for (const key of order) {
-      const bgEl = document.createElement('div');
-      bgEl.classList.add('delab-overlay');
-      bgEl.style.cssText = `
+      const el = document.createElement('div');
+      el.classList.add('delab-overlay');
+      el.style.cssText = `
         position: fixed;
         pointer-events: none;
-        z-index: ${2147483630 + order.indexOf(key) * 2 + 1};
+        box-sizing: border-box;
+        border-style: solid;
+        border-width: 0;
+        background: transparent;
+        z-index: ${2147483630 + order.indexOf(key)};
         display: none;
       `;
-      bgEl.dataset.bgColor = COLORS[key].bg;
-      this.parent.appendChild(bgEl);
-      bg[key] = bgEl;
-
-      const lineEl = document.createElement('div');
-      lineEl.classList.add('delab-overlay');
-      lineEl.style.cssText = `
-        position: fixed;
-        pointer-events: none;
-        z-index: ${2147483630 + order.indexOf(key) * 2 + 2};
-        display: none;
-      `;
-      lineEl.dataset.borderColor = COLORS[key].border;
-      this.parent.appendChild(lineEl);
-      line[key] = lineEl;
+      this.parent.appendChild(el);
+      layers[key] = el;
     }
-    return { bg: bg as Record<BoxLayer, HTMLElement>, line: line as Record<BoxLayer, HTMLElement> };
+    return layers;
   }
 
   show(target: Element) {
@@ -91,57 +96,51 @@ export class BoxModelOverlay {
       if (rect.width === 0 && rect.height === 0) { this.hide(); return; }
 
       const bm = this.extractor.getBoxModel(target);
-      const pad = bm.padding, bd = bm.border, mg = bm.margin;
+      const borderBox: Box = { top: rect.top, left: rect.left, width: rect.width, height: rect.height };
+      const paddingBox = inset(borderBox, bm.border);
+      const contentBox = inset(paddingBox, bm.padding);
+      const marginBox = outset(borderBox, bm.margin);
 
-      const bw = bd.left + bd.right, bh = bd.top + bd.bottom;
-      const pw = pad.left + pad.right, ph = pad.top + pad.bottom;
-
-      // border = rect（border-box 原位）
-      this.setLayer('border', rect.top, rect.left, rect.width, rect.height);
-
-      // padding = border-box 向内缩 border
-      this.setLayer('padding',
-        rect.top + bd.top, rect.left + bd.left,
-        rect.width - bw, rect.height - bh);
-
-      // content = border-box 向内缩 border + padding
-      this.setLayer('content',
-        rect.top + bd.top + pad.top, rect.left + bd.left + pad.left,
-        rect.width - bw - pw, rect.height - bh - ph);
-
-      // margin = border-box 向外扩 margin
-      this.setLayer('margin',
-        rect.top - mg.top, rect.left - mg.left,
-        rect.width + mg.left + mg.right, rect.height + mg.top + mg.bottom);
+      // 每层色带厚度 = 该区域向外一圈的宽度；content 直接整块填充
+      // padding 区从 border 内沿开始，border 本身不画
+      this.paint('margin', marginBox, bm.margin);
+      this.paint('padding', paddingBox, bm.padding);
+      this.paint('content', contentBox, { top: 0, right: 0, bottom: 0, left: 0 });
     } catch {
       this.hide();
     }
   }
 
-  private setLayer(key: BoxLayer, top: number, left: number, w: number, h: number) {
-    const bgEl = this.layers[key];
-    bgEl.style.display = 'block';
-    bgEl.style.background = bgEl.dataset.bgColor || '';
-    bgEl.style.top = `${top}px`;
-    bgEl.style.left = `${left}px`;
-    bgEl.style.width = `${Math.max(0, w)}px`;
-    bgEl.style.height = `${Math.max(0, h)}px`;
+  private paint(key: BoxLayer, box: Box, ring: Ring) {
+    const el = this.layers[key];
+    const w = Math.max(0, box.width);
+    const h = Math.max(0, box.height);
+    const band = [
+      clamp(ring.top, h / 2),
+      clamp(ring.right, w / 2),
+      clamp(ring.bottom, h / 2),
+      clamp(ring.left, w / 2),
+    ];
+    // content 整块填充；margin / padding 只画外圈，厚度为 0 时直接隐藏
+    if (key !== 'content' && band.every(v => v <= 0)) {
+      el.style.display = 'none';
+      return;
+    }
 
-    const lineEl = this.lines[key];
-    lineEl.style.display = 'block';
-    lineEl.style.top = `${top}px`;
-    lineEl.style.left = `${left}px`;
-    lineEl.style.width = `${Math.max(0, w)}px`;
-    lineEl.style.height = `${Math.max(0, h)}px`;
-    lineEl.style.border = `1px dashed ${lineEl.dataset.borderColor}`;
-    lineEl.style.background = 'transparent';
+    el.style.display = 'block';
+    el.style.top = `${box.top}px`;
+    el.style.left = `${box.left}px`;
+    el.style.width = `${w}px`;
+    el.style.height = `${h}px`;
+    el.style.borderWidth = band.map(v => `${v}px`).join(' ');
+    el.style.borderColor = COLORS[key].fill;
+    el.style.background = key === 'content' ? COLORS[key].fill : 'transparent';
   }
 
   hide() {
     this.target = null;
-    for (const key of ['margin','border','padding','content'] as BoxLayer[]) {
+    for (const key of ['margin', 'padding', 'content'] as BoxLayer[]) {
       this.layers[key].style.display = 'none';
-      this.lines[key].style.display = 'none';
     }
   }
 
@@ -150,9 +149,8 @@ export class BoxModelOverlay {
     window.removeEventListener('resize', this.schedule);
     this.target = null;
     if (this.rafId) cancelAnimationFrame(this.rafId);
-    for (const key of ['margin','border','padding','content'] as BoxLayer[]) {
+    for (const key of ['margin', 'padding', 'content'] as BoxLayer[]) {
       this.layers[key].remove();
-      this.lines[key].remove();
     }
   }
 }
