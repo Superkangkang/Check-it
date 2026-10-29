@@ -64,11 +64,12 @@ export function CommentIcon({ size = 16 }: IconProps) {
   );
 }
 
-export function CheckIcon({ size = 16 }: IconProps) {
+export function CircleCheckIcon({ size = 16 }: IconProps) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor"
       strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
-      <path d="M20 6 9 17l-5-5" />
+      <circle cx="12" cy="12" r="9" />
+      <path d="m8.5 12 2.5 2.5 4.5-4.5" />
     </svg>
   );
 }

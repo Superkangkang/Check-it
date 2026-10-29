@@ -38,6 +38,8 @@ const CSS_VARIABLES: Record<Theme, Record<string, string>> = {
     '--delab-danger': '#e5484d',
     // 阴影
     '--delab-shadow': '0 2px 8px -1px rgba(0, 0, 0, 0.10), 0 12px 32px -4px rgba(0, 0, 0, 0.18)',
+    // 浮在页面内容之上的卡片（面板 / 评论弹层）：多一层描边 + 更远的投影，避免与页面混在一起
+    '--delab-shadow-float': '0 0 0 1px rgba(0, 0, 0, 0.05), 0 8px 20px -4px rgba(0, 0, 0, 0.16), 0 24px 56px -12px rgba(0, 0, 0, 0.26)',
     // 页面浮层（toast / 标签等贴页面元素的玻璃面）
     '--delab-glass-bg': 'rgba(255, 255, 255, 0.92)',
     '--delab-glass-text': '#141416',
@@ -72,6 +74,8 @@ const CSS_VARIABLES: Record<Theme, Record<string, string>> = {
     '--delab-danger': '#f65a5a',
     // 阴影
     '--delab-shadow': '0 2px 8px -1px rgba(0, 0, 0, 0.40), 0 12px 32px -4px rgba(0, 0, 0, 0.60)',
+    // 深色页面靠一圈浅色描边区分边界，纯黑影几乎看不出层次
+    '--delab-shadow-float': '0 0 0 1px rgba(255, 255, 255, 0.08), 0 8px 20px -4px rgba(0, 0, 0, 0.55), 0 24px 56px -12px rgba(0, 0, 0, 0.75)',
     // 页面浮层
     '--delab-glass-bg': 'rgba(23, 23, 24, 0.94)',
     '--delab-glass-text': '#ececee',

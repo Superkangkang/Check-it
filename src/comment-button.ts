@@ -1,7 +1,10 @@
 // DeLab Comment Button — 选中元素下方出现的「评论」按钮
 
+import { SANS } from './theme';
+
 const GAP = 8;
-const SIZE = 28;
+/** 与元素下方标签（GlassLabel）齐高 */
+const HEIGHT = 22;
 
 export class CommentButton {
   private node: HTMLButtonElement;
@@ -19,24 +22,30 @@ export class CommentButton {
     this.node.title = '添加评论';
     this.node.setAttribute('aria-label', '添加评论');
     this.node.innerHTML = `
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
         stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
         <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2Z"/>
       </svg>
+      <span>评论</span>
     `;
     this.node.style.cssText = `
       position: fixed;
       display: none;
       align-items: center;
       justify-content: center;
-      width: ${SIZE}px;
-      height: ${SIZE}px;
-      padding: 0;
+      gap: 4px;
+      height: ${HEIGHT}px;
+      padding: 0 8px;
       border: 1px solid var(--delab-glass-border, rgba(255, 255, 255, 0.12));
-      border-radius: 50%;
+      border-radius: 6px;
       background: var(--delab-glass-bg, rgba(23, 23, 24, 0.94));
       color: var(--delab-glass-text, #ececee);
+      font-family: ${SANS};
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.02em;
       line-height: 1;
+      white-space: nowrap;
       pointer-events: auto;
       z-index: 2147483644;
       box-shadow: var(--delab-shadow, 0 8px 24px rgba(0, 0, 0, 0.35));

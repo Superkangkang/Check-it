@@ -1,13 +1,11 @@
 // DeLab Comment Popover — 页面内评论弹层（输入 / 查看）
 
 import { CommentThread } from './comment-store';
-import { ElementIdentity, summarizeElement } from './element-identity';
 import { SANS, MONO } from './theme';
 
 export interface PopoverActions {
   onSubmit: (body: string) => void;
   onToggleResolve: (thread: CommentThread) => void;
-  onDelete: (thread: CommentThread) => void;
   /** 复制全部未解决评论给 AI */
   onCopyAll: () => void;
   /** 查看评论截图大图 */
@@ -19,6 +17,15 @@ export interface PopoverActions {
 const WIDTH = 300;
 const GAP = 8;
 
+/** 头部图标按钮用的 24 格描边图形 */
+const icon = (paths: string) =>
+  `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+    stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths}</svg>`;
+const ICON_COPY = icon('<rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>');
+const ICON_RESOLVE = icon('<circle cx="12" cy="12" r="9"/><path d="m8.5 12 2.5 2.5 4.5-4.5"/>');
+const ICON_REOPEN = icon('<path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/>');
+const ICON_CLOSE = icon('<path d="M18 6 6 18"/><path d="m6 6 12 12"/>');
+
 function formatTime(ts: number): string {
   const d = new Date(ts);
   const pad = (n: number) => String(n).padStart(2, '0');
@@ -29,6 +36,7 @@ export class CommentPopover {
   private card: HTMLElement;
   private header: HTMLElement;
   private title: HTMLElement;
+  private ops: HTMLElement;
   private body: HTMLElement;
   private actions: PopoverActions;
   private target: Element | null = null;
@@ -45,11 +53,11 @@ export class CommentPopover {
       width: ${WIDTH}px;
       display: none;
       flex-direction: column;
-      background: var(--delab-bg, #f5f5f6);
+      background: var(--delab-elevated, #ffffff);
       color: var(--delab-text, #141416);
       border: 1px solid var(--delab-border-strong, rgba(0, 0, 0, 0.16));
       border-radius: 12px;
-      box-shadow: var(--delab-shadow, 0 12px 32px -4px rgba(0, 0, 0, 0.25));
+      box-shadow: var(--delab-shadow-float, 0 0 0 1px rgba(0, 0, 0, 0.05), 0 8px 20px -4px rgba(0, 0, 0, 0.16), 0 24px 56px -12px rgba(0, 0, 0, 0.26));
       font-family: ${SANS};
       z-index: 2147483646;
       overflow: hidden;
@@ -61,12 +69,14 @@ export class CommentPopover {
       align-items: center;
       justify-content: space-between;
       gap: 8px;
-      padding: 8px 10px;
+      padding: 6px 8px 6px 10px;
       border-bottom: 1px solid var(--delab-border, rgba(0, 0, 0, 0.08));
     `;
 
     this.title = document.createElement('span');
     this.title.style.cssText = `
+      flex: 1;
+      min-width: 0;
       font-family: ${MONO};
       font-size: 10px;
       color: var(--delab-text-tertiary, #8a8a90);
@@ -75,12 +85,11 @@ export class CommentPopover {
       text-overflow: ellipsis;
     `;
 
-    const closeBtn = this.button('×', false);
-    closeBtn.title = '关闭';
-    closeBtn.style.cssText += 'width:20px;height:20px;padding:0;border:none;font-size:15px;line-height:1;';
-    closeBtn.addEventListener('click', () => this.dismiss());
+    // 右上角图标操作区，内容随当前评论重建
+    this.ops = document.createElement('div');
+    this.ops.style.cssText = 'display: flex; align-items: center; gap: 2px; flex: none;';
 
-    this.header.append(this.title, closeBtn);
+    this.header.append(this.title, this.ops);
 
     this.body = document.createElement('div');
     this.body.style.cssText = 'padding: 10px;';
@@ -94,8 +103,8 @@ export class CommentPopover {
   }
 
   /** 点击图标后弹出的纯输入框：整个容器就是输入区 */
-  openComposer(target: Element, identity: ElementIdentity) {
-    this.mount(target, identity);
+  openComposer(target: Element) {
+    this.mount(target);
     this.header.style.display = 'none';
     this.card.style.border = 'none';
     this.body.style.padding = '0';
@@ -148,31 +157,29 @@ export class CommentPopover {
 
   /** 点击页面上的编号气泡展开已有评论 */
   openThread(target: Element, thread: CommentThread, index: number) {
-    this.mount(target, thread.identity);
+    this.mount(target);
     this.header.style.display = 'flex';
     this.card.style.border = '1px solid var(--delab-border-strong, rgba(0, 0, 0, 0.16))';
     this.body.style.padding = '10px';
     this.body.replaceChildren();
 
+    // 头部只留序号与时间，操作用图标放在右上角
+    this.title.textContent = `#${index} · ${formatTime(thread.createdAt)}`;
+    this.title.title = '';
+    this.ops.replaceChildren(
+      this.iconButton(ICON_COPY, '复制给 AI', () => this.actions.onCopyAll()),
+      this.iconButton(
+        thread.resolved ? ICON_REOPEN : ICON_RESOLVE,
+        thread.resolved ? '重新打开' : '标记解决',
+        () => this.actions.onToggleResolve(thread)
+      ),
+      this.iconButton(ICON_CLOSE, '关闭', () => this.dismiss())
+    );
+
     const text = document.createElement('div');
     text.textContent = thread.body;
     text.style.cssText = 'font-size: 12px; line-height: 1.55; white-space: pre-wrap; word-break: break-word;';
-
-    const meta = document.createElement('div');
-    meta.textContent = `#${index} · ${formatTime(thread.createdAt)}${thread.resolved ? ' · 已解决' : ''}`;
-    meta.style.cssText = 'margin-top: 6px; font-size: 10px; color: var(--delab-text-tertiary, #8a8a90);';
-
-    const footer = document.createElement('div');
-    footer.style.cssText = 'display: flex; justify-content: flex-end; gap: 6px; margin-top: 8px;';
-
-    const remove = this.button('删除', false);
-    const resolve = this.button(thread.resolved ? '重新打开' : '标记解决', false);
-    const copy = this.button('复制给 AI', true);
-    remove.addEventListener('click', () => this.actions.onDelete(thread));
-    resolve.addEventListener('click', () => this.actions.onToggleResolve(thread));
-    copy.addEventListener('click', () => this.actions.onCopyAll());
-
-    footer.append(remove, resolve, copy);
+    this.body.append(text);
 
     // 元素区域截图：定位失效时帮助确认评论对象
     if (thread.snapshot) {
@@ -195,9 +202,7 @@ export class CommentPopover {
         event.stopPropagation();
         this.actions.onPreviewImage(thread.snapshot!);
       });
-      this.body.append(text, meta, shot, footer);
-    } else {
-      this.body.append(text, meta, footer);
+      this.body.append(shot);
     }
 
     this.show();
@@ -227,10 +232,8 @@ export class CommentPopover {
     this.actions.onDismiss();
   }
 
-  private mount(target: Element, identity: ElementIdentity) {
+  private mount(target: Element) {
     this.target = target;
-    this.title.textContent = summarizeElement(identity);
-    this.title.title = identity.selector;
     // 靠后挂载，保证与浮窗面板同层级时压在面板之上
     this.card.parentElement?.appendChild(this.card);
   }
@@ -281,22 +284,40 @@ export class CommentPopover {
     this.dismiss();
   };
 
-  private button(label: string, primary: boolean): HTMLButtonElement {
+  /** 头部右上角的图标操作按钮 */
+  private iconButton(svg: string, label: string, onClick: () => void): HTMLButtonElement {
     const button = document.createElement('button');
     button.type = 'button';
-    button.textContent = label;
+    button.title = label;
+    button.setAttribute('aria-label', label);
+    button.innerHTML = svg;
     button.style.cssText = `
-      padding: 5px 10px;
-      border-radius: 6px;
-      font-family: ${SANS};
-      font-size: 11px;
-      font-weight: 500;
-      line-height: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 22px;
+      height: 22px;
+      padding: 0;
+      border: none;
+      border-radius: 5px;
+      background: transparent;
+      color: var(--delab-text-tertiary, #8a8a90);
       cursor: pointer;
-      border: 1px solid ${primary ? 'transparent' : 'var(--delab-border-strong, rgba(0, 0, 0, 0.16))'};
-      background: ${primary ? 'var(--delab-btn-bg, #141416)' : 'transparent'};
-      color: ${primary ? 'var(--delab-btn-text, #ffffff)' : 'var(--delab-text, #141416)'};
+      transition: color 0.12s ease, background 0.12s ease;
     `;
+    button.addEventListener('mouseenter', () => {
+      button.style.background = 'var(--delab-row-hover, rgba(0, 0, 0, 0.045))';
+      button.style.color = 'var(--delab-text, #141416)';
+    });
+    button.addEventListener('mouseleave', () => {
+      button.style.background = 'transparent';
+      button.style.color = 'var(--delab-text-tertiary, #8a8a90)';
+    });
+    button.addEventListener('click', event => {
+      event.preventDefault();
+      event.stopPropagation();
+      onClick();
+    });
     return button;
   }
 }

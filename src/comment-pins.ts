@@ -177,6 +177,13 @@ export class CommentPins {
         return;
       }
 
+      // 元素滚出视口后气泡跟着一起离开，不要吸附在屏幕边界
+      if (rect.bottom <= 0 || rect.top >= window.innerHeight ||
+          rect.right <= 0 || rect.left >= window.innerWidth) {
+        record.node.style.display = 'none';
+        return;
+      }
+
       // 默认贴元素左上角，被占用时向左右 / 上下挪开，并避开标签与评论按钮
       const base = { left: rect.left - PIN_SIZE / 2, top: rect.top - PIN_SIZE / 2 };
       const position = this.findFreeSpot(base, placed, obstacles);
@@ -193,16 +200,15 @@ export class CommentPins {
     const step = PIN_SIZE + 2;
 
     for (const [dx, dy] of SPOT_ORDER) {
-      const spot = clampToViewport({
-        left: base.left + dx * step,
-        top: base.top + dy * step,
-      });
+      const left = base.left + dx * step;
+      const top = base.top + dy * step;
+      const spot = { left, top, right: left + PIN_SIZE, bottom: top + PIN_SIZE };
       const hit = [...placed, ...obstacles].some(rect => intersects(spot, rect));
       if (!hit) return spot;
     }
 
     // 全都挤满时退回原位，保证仍能看到
-    return clampToViewport(base);
+    return { left: base.left, top: base.top, right: base.left + PIN_SIZE, bottom: base.top + PIN_SIZE };
   }
 
   /** 需要避让的插件 UI：元素标签、评论按钮、评论弹层、模式切换器 */
@@ -267,8 +273,6 @@ interface Rect {
   bottom: number;
 }
 
-const EDGE = 4;
-
 /** 候选位：先原位，再依次向左 / 向右 / 上下错开 */
 const SPOT_ORDER: Array<[number, number]> = [
   [0, 0],
@@ -280,14 +284,6 @@ const SPOT_ORDER: Array<[number, number]> = [
   [-2, -1], [2, -1],
   [-2, 1], [2, 1],
 ];
-
-function clampToViewport(spot: { left: number; top: number }): Rect {
-  const maxLeft = Math.max(EDGE, window.innerWidth - PIN_SIZE - EDGE);
-  const maxTop = Math.max(EDGE, window.innerHeight - PIN_SIZE - EDGE);
-  const left = Math.min(Math.max(spot.left, EDGE), maxLeft);
-  const top = Math.min(Math.max(spot.top, EDGE), maxTop);
-  return { left, top, right: left + PIN_SIZE, bottom: top + PIN_SIZE };
-}
 
 function intersects(a: Rect, b: Rect): boolean {
   return a.left < b.right + 1 && a.right > b.left - 1 && a.top < b.bottom + 1 && a.bottom > b.top - 1;
