@@ -20,22 +20,37 @@ const UNIT_REGEX = /^(-?\d+(?:\.\d+)?)(px|%|em|rem|vh|vw|pt)$/;
 const ENUM_OPTIONS: Record<string, string[]> = {
   'display': ['block', 'inline', 'inline-block', 'flex', 'inline-flex', 'grid', 'inline-grid', 'none'],
   'flex-direction': ['row', 'row-reverse', 'column', 'column-reverse'],
+  'flex-wrap': ['nowrap', 'wrap', 'wrap-reverse'],
   'justify-content': ['flex-start', 'flex-end', 'center', 'space-between', 'space-around', 'space-evenly', 'start', 'end'],
   'align-items': ['stretch', 'flex-start', 'flex-end', 'center', 'baseline', 'start', 'end'],
+  'align-content': ['normal', 'stretch', 'flex-start', 'flex-end', 'center', 'space-between', 'space-around'],
+  'position': ['static', 'relative', 'absolute', 'fixed', 'sticky'],
   'text-align': ['left', 'right', 'center', 'justify', 'start', 'end'],
   'font-weight': ['100', '200', '300', '400', '500', '600', '700', '800', '900', 'normal', 'bold'],
 };
 
 const META: Record<string, ControlMeta> = {
+  // Position
+  'position':         { control: 'enum',   cssProps: ['position'] },
+  'top':              { control: 'length', cssProps: ['top'] },
+  'right':            { control: 'length', cssProps: ['right'] },
+  'bottom':           { control: 'length', cssProps: ['bottom'] },
+  'left':             { control: 'length', cssProps: ['left'] },
+  'z-index':          { control: 'number', cssProps: ['z-index'] },
   // Size
   'width':            { control: 'length', cssProps: ['width'] },
   'height':           { control: 'length', cssProps: ['height'] },
   // Layout
   'display':          { control: 'enum',   cssProps: ['display'] },
   'flex-direction':   { control: 'enum',   cssProps: ['flex-direction'] },
+  'flex-wrap':        { control: 'enum',   cssProps: ['flex-wrap'] },
   'justify-content':  { control: 'enum',   cssProps: ['justify-content'] },
   'align-items':      { control: 'enum',   cssProps: ['align-items'] },
+  'align-content':    { control: 'enum',   cssProps: ['align-content'] },
   'gap':              { control: 'length', cssProps: ['gap'] },
+  'flex-grow':        { control: 'number', cssProps: ['flex-grow'] },
+  'flex-shrink':      { control: 'number', cssProps: ['flex-shrink'] },
+  'flex-basis':       { control: 'length', cssProps: ['flex-basis'] },
   // Spacing — shorthand, expanded into four sides in a later phase
   'margin':           { control: 'text',   cssProps: ['margin'] },
   'padding':          { control: 'text',   cssProps: ['padding'] },

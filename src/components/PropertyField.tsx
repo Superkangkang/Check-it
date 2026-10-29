@@ -31,7 +31,7 @@ const FIELD_BG_HOVER = 'var(--delab-field-hover, #f3f3f5)';
 const baseField: React.CSSProperties = {
   width: '100%', boxSizing: 'border-box',
   fontFamily: "'JetBrains Mono', 'SF Mono', Menlo, monospace", fontSize: 11, lineHeight: '16px',
-  height: 24, padding: '0 6px', borderRadius: 6,
+  height: 28, padding: '0 8px', borderRadius: 6,
   background: FIELD_BG,
   color: 'var(--delab-text, #141416)',
   border: '1px solid transparent',
@@ -41,7 +41,7 @@ const baseField: React.CSSProperties = {
 function PrefixLabel({ children }: { children: React.ReactNode }) {
   return (
     <span style={{
-      position: 'absolute', left: 5, top: 0, height: 24, display: 'flex', alignItems: 'center',
+      position: 'absolute', left: 7, top: 0, height: 28, display: 'flex', alignItems: 'center',
       fontSize: 9, lineHeight: 1, color: 'var(--delab-text-tertiary, #8a8a90)',
       pointerEvents: 'none', zIndex: 1,
     }}>
@@ -130,7 +130,7 @@ export function PropertyField({ spec, onCommit }: PropertyFieldProps) {
     ...baseField,
     background: hover && !focused ? FIELD_BG_HOVER : FIELD_BG,
     borderColor,
-    paddingLeft: prefix ? 16 : 6,
+    paddingLeft: prefix ? 20 : 8,
   };
 
   // ── enum ──
@@ -194,7 +194,7 @@ export function PropertyField({ spec, onCommit }: PropertyFieldProps) {
           onBlur={handleBlur}
           onKeyDown={handleKeyDown}
           spellCheck={false}
-          style={{ ...fieldStyle, paddingLeft: 24 }}
+          style={{ ...fieldStyle, paddingLeft: 28 }}
         />
       </div>
     );

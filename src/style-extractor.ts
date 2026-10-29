@@ -8,6 +8,9 @@ export interface StyleGroup {
   properties: StyleProperty[];
 }
 
+/** 尺寸行为：固定 / 贴合内容 / 撑满父级（对应 Figma 的 Fixed / Hug / Fill） */
+export type SizeMode = 'fixed' | 'hug' | 'fill';
+
 export interface StyleProperty {
   name: string;
   value: string;
@@ -28,6 +31,8 @@ export interface StyleProperty {
   original?: string | null;
   /** Sub-fields for multi-value properties (margin / padding / border / radius / gap) */
   parts?: StylePart[];
+  /** 宽度 / 高度当前的行为，供尺寸三态按钮显示 */
+  sizeMode?: SizeMode;
 }
 
 /** One editable sub-value of a multi-value property */
@@ -47,6 +52,7 @@ interface RawProperty {
   value: string;
   isColor: boolean;
   parts?: StylePart[];
+  sizeMode?: SizeMode;
 }
 
 interface RawGroup {
@@ -68,15 +74,19 @@ export interface BoxModel {
   content: { width: number; height: number };
 }
 
-// 7 groups, 18 base properties (margin/padding/border auto-merged to shorthand)
+// 按 Figma 面板分区组织属性
 const GROUP_DEFS: Record<string, string[]> = {
-  'Size':       ['width', 'height'],
-  'Layout':     ['display', 'flex-direction', 'justify-content', 'align-items', 'gap'],
+  'Position':   ['position', 'top', 'right', 'bottom', 'left', 'z-index'],
+  'Layout':     [
+    'width', 'height', 'display', 'flex-direction', 'justify-content', 'align-items',
+    'gap', 'flex-wrap', 'align-content', 'flex-grow', 'flex-shrink', 'flex-basis',
+  ],
   'Spacing':    [], // merged: margin / padding
-  'Color':      [], // merged: color / background-color / border-color
   'Typography': ['font-size', 'font-weight', 'line-height', 'letter-spacing', 'text-align'],
-  'Border':     [], // merged: border
-  'Shape & Effect': ['box-shadow'], // + opacity, border-radius
+  'Appearance': [], // merged: opacity / border-radius
+  'Fill':       [], // merged: background-color
+  'Stroke':     [], // merged: border / border-color
+  'Effects':    ['box-shadow'],
 };
 
 const COLOR_REGEX = /^(#([0-9a-fA-F]{3,8})|rgba?\(.+\)|hsla?\(.+\)|transparent|currentColor|inherit)(\s|$)/;
@@ -87,6 +97,9 @@ const LABEL_MAP: Record<string, string> = {
   'justify-content': 'justify',
   'letter-spacing': 'letter-sp',
   'border-radius': 'radius',
+  'align-content': 'align-cont',
+  'flex-basis': 'basis',
+  'flex-shrink': 'shrink',
 };
 
 export function displayLabel(name: string): string {
@@ -161,6 +174,25 @@ export function toHex(value: string): string {
   return rgbToHex(value) || value;
 }
 
+/** 读取颜色的透明度（0–1），支持 #rrggbbaa 与 rgba() */
+export function getAlpha(color: string): number {
+  const hex = toHex(color).trim();
+  const hexMatch = hex.match(/^#[0-9a-fA-F]{6}([0-9a-fA-F]{2})$/);
+  if (hexMatch) return parseInt(hexMatch[1], 16) / 255;
+  const rgbaMatch = color.match(/^rgba?\([^)]*?,\s*([\d.]+)\)$/);
+  if (rgbaMatch) return parseFloat(rgbaMatch[1]);
+  return 1;
+}
+
+/** 给颜色设置透明度，返回 #rrggbbaa；非 hex 颜色原样返回 */
+export function withAlpha(color: string, alpha: number): string {
+  const hex = toHex(color).trim();
+  const match = hex.match(/^#([0-9a-fA-F]{6})(?:[0-9a-fA-F]{2})?$/);
+  if (!match) return color;
+  const a = Math.max(0, Math.min(1, alpha));
+  return `#${match[1]}${Math.round(a * 255).toString(16).padStart(2, '0')}`;
+}
+
 export class StyleExtractor {
   extract(target: Element, session?: EditSession | null): StyleGroup[] {
     const c = window.getComputedStyle(target);
@@ -176,35 +208,38 @@ export class StyleExtractor {
         if (merged.length) groups.push({ name, properties: merged });
         continue;
       }
-      if (name === 'Border') {
+      if (name === 'Stroke') {
+        const merged: RawProperty[] = [];
         const bd = this.mergeBorder(c);
         if (bd) {
-          groups.push({
-            name,
-            properties: [{
-              ...bd,
-              parts: [
-                {
-                  label: 'W', cssProp: 'border-width', control: 'length', unit: 'px',
-                  value: c.getPropertyValue('border-top-width') || '0px',
-                },
-                {
-                  label: 'S', cssProp: 'border-style', control: 'enum',
-                  options: ['none', 'solid', 'dashed', 'dotted', 'double'],
-                  value: c.getPropertyValue('border-top-style') || 'none',
-                },
-              ],
-            }],
+          merged.push({
+            ...bd,
+            parts: [
+              {
+                label: 'W', cssProp: 'border-width', control: 'length', unit: 'px',
+                value: c.getPropertyValue('border-top-width') || '0px',
+              },
+              {
+                label: 'S', cssProp: 'border-style', control: 'enum',
+                options: ['none', 'solid', 'dashed', 'dotted', 'double'],
+                value: c.getPropertyValue('border-top-style') || 'none',
+              },
+            ],
           });
         }
+        const bdColor = c.getPropertyValue('border-color');
+        const bdStyle = c.getPropertyValue('border-style');
+        const bdWidth = c.getPropertyValue('border-top-width');
+        if (bdColor && bdStyle !== 'none' && bdWidth !== '0px') {
+          merged.push({ name: 'border-color', value: toHex(bdColor), isColor: true });
+        }
+        if (merged.length) groups.push({ name, properties: merged });
         continue;
       }
-      if (name === 'Shape & Effect') {
+      if (name === 'Appearance') {
         const merged: RawProperty[] = [];
-        // opacity
         const o = c.getPropertyValue('opacity');
         if (o && o !== '1') merged.push({ name: 'opacity', value: o, isColor: false });
-        // border-radius
         const r = c.getPropertyValue('border-radius');
         if (r && r !== '0px') {
           merged.push({
@@ -217,28 +252,14 @@ export class StyleExtractor {
             ],
           });
         }
-        // box-shadow (from GROUP_DEFS)
-        for (const prop of props) {
-          const v = c.getPropertyValue(prop);
-          if (v && v !== 'none') merged.push({ name: prop, value: v, isColor: false });
-        }
         if (merged.length) groups.push({ name, properties: merged });
         continue;
       }
-      if (name === 'Color') {
-        const colorProps: RawProperty[] = [];
-        const textColor = c.getPropertyValue('color');
-        if (textColor) colorProps.push({ name: 'color', value: toHex(textColor), isColor: true });
+      if (name === 'Fill') {
         const bgColor = c.getPropertyValue('background-color');
-        if (bgColor && bgColor !== 'rgba(0, 0, 0, 0)') colorProps.push({ name: 'background', value: toHex(bgColor), isColor: true });
-        const bdColor = c.getPropertyValue('border-color');
-        // only show border-color if there is actually a visible border
-        const bdStyle = c.getPropertyValue('border-style');
-        const bdWidth = c.getPropertyValue('border-top-width');
-        if (bdColor && bdStyle !== 'none' && bdWidth !== '0px') {
-          colorProps.push({ name: 'border-color', value: toHex(bdColor), isColor: true });
+        if (bgColor && bgColor !== 'rgba(0, 0, 0, 0)') {
+          groups.push({ name, properties: [{ name: 'background', value: toHex(bgColor), isColor: true }] });
         }
-        if (colorProps.length) groups.push({ name, properties: colorProps });
         continue;
       }
 
@@ -246,7 +267,11 @@ export class StyleExtractor {
       for (const prop of props) {
         const value = c.getPropertyValue(prop);
         if (!value) continue;
-        const isColor = COLOR_REGEX.test(value.trim()) || (prop.includes('color') && value !== '');
+        // 无阴影时 computed 会返回 none，不作为一条属性展示
+        if (prop === 'box-shadow' && value === 'none') continue;
+        // box-shadow 的值以颜色开头，但它不是一个颜色属性，不能按颜色行渲染
+        const isColor = prop !== 'box-shadow'
+          && (COLOR_REGEX.test(value.trim()) || (prop.includes('color') && value !== ''));
 
         // gap can hold two values (row / column) — split them into separate fields
         if (prop === 'gap') {
@@ -263,13 +288,22 @@ export class StyleExtractor {
           }
         }
 
-        properties.push({ name: prop, value, isColor });
+        properties.push({
+          name: prop,
+          value,
+          isColor,
+          sizeMode: prop === 'width' || prop === 'height'
+            ? this.sizeModeOf(target, prop, c)
+            : undefined,
+        });
       }
 
-      // Typography: prepend detected font
+      // Typography: 前置检测到的实际字体，末尾追加文字颜色
       if (name === 'Typography') {
         const font = this.detectRenderedFont(c);
         if (font) properties.unshift({ name: 'font', value: font, isColor: false });
+        const textColor = c.getPropertyValue('color');
+        if (textColor) properties.push({ name: 'color', value: toHex(textColor), isColor: true });
       }
 
       if (properties.length) groups.push({ name, properties });
@@ -297,9 +331,23 @@ export class StyleExtractor {
       isColor: p.isColor,
       ...meta,
       parts: p.parts,
+      sizeMode: p.sizeMode,
       modified,
       original: session ? session.originalOf(primary) : null,
     };
+  }
+
+  /** 判断宽 / 高当前是固定、贴合内容还是撑满父级 */
+  private sizeModeOf(target: Element, prop: 'width' | 'height', c: CSSStyleDeclaration): SizeMode {
+    const inline = (target as HTMLElement).style?.getPropertyValue(prop).trim() ?? '';
+    if (/^(fit-content|max-content|min-content)$/.test(inline)) return 'hug';
+
+    const grow = parseFloat(c.getPropertyValue('flex-grow')) || 0;
+    const isRow = (c.getPropertyValue('flex-direction') || 'row').startsWith('row');
+    const stretched = c.getPropertyValue('align-self') === 'stretch';
+
+    if (prop === 'width') return isRow && grow > 0 ? 'fill' : 'fixed';
+    return (!isRow && grow > 0) || stretched ? 'fill' : 'fixed';
   }
 
   /** Four-side sub-fields for margin / padding. */
@@ -435,8 +483,18 @@ export class StyleExtractor {
 // ── 空值判断 ──
 export function isEmptyValue(name: string, value: string): boolean {
   const v = value.trim();
-  if (v === '0px' || v === '0' || v === 'none' || v === 'normal' ||
-      v === 'auto' || v === 'static' || v === 'start' || v === 'row' || v === '1' ||
+  // position 始终保留：默认 static 时也要能切成 relative / absolute
+  if (name === 'position') return false;
+  // 默认值不算有效内容，避免面板被"什么都没设置"的字段撑满
+  if (name === 'opacity') return v === '1';
+  if (name === 'flex-grow') return v === '0';
+  if (name === 'flex-shrink') return v === '1';
+  if (name === 'flex-basis') return v === 'auto';
+  // 盒模型 / 间距类：0 视为没设置；top / left 之类的 0 仍然有意义
+  if (/^(margin|padding|gap|row-gap|column-gap|border-radius|border-width|letter-spacing)/.test(name)
+      && (v === '0px' || v === '0')) return true;
+  if (v === 'none' || v === 'normal' || v === 'auto' ||
+      v === 'start' || v === 'row' || v === 'nowrap' ||
       v === '#00000000' || v === 'transparent') return true;
   // border with 0px and no style
   if (name === 'border' && /^0px( none)?( rgb\(0, 0, 0\))?/.test(v)) return true;
