@@ -1,12 +1,31 @@
 // DeLab Style Panel - React component
 
 import { useState } from 'react';
-import { StyleGroup, StyleProperty, ColorFormat, isEmptyValue } from '../style-extractor';
+import { StyleGroup, StyleProperty, ColorFormat, SizeMode, isEmptyValue } from '../style-extractor';
 import { PropertyRow } from './PropertyRow';
 import { LayoutControls } from './LayoutControls';
 
 /** 这几个属性合成「方向 + 对齐」控件，不再逐条列出 */
-const LAYOUT_KEYS = ['display', 'flex-direction', 'flex-wrap', 'justify-content', 'align-items'];
+const LAYOUT_KEYS = [
+  'width', 'height', 'display', 'flex-direction', 'flex-wrap',
+  'justify-content', 'align-items', 'gap',
+];
+
+/** flex 三件套是落码细节，面板默认不展示，只在「显示全部」时露出 */
+const FLEX_DETAIL_KEYS = ['flex-grow', 'flex-shrink', 'flex-basis'];
+
+/** display 常用值，其余（inline / inline-block / none …）暂不提供 */
+const DISPLAY_OPTIONS = ['block', 'flex', 'grid'];
+
+/** 分组标题右侧的小选择器样式 */
+const headerSelectStyle: React.CSSProperties = {
+  height: 20, padding: '0 4px',
+  fontFamily: 'inherit', fontSize: 10,
+  border: '1px solid var(--delab-border, rgba(0,0,0,0.08))',
+  borderRadius: 5, background: 'var(--delab-field-bg, #ffffff)',
+  color: 'var(--delab-text-secondary, #57575e)',
+  cursor: 'pointer', outline: 'none',
+};
 
 interface StylePanelProps {
   groups: StyleGroup[];
@@ -25,11 +44,13 @@ export function StylePanel({
 
   const visibleGroups: Array<{ name: string; props: StyleProperty[] }> = [];
   for (const group of groups) {
-    const filtered = showAll
+    // flex 三件套属于实现细节，默认隐藏，开「显示全部」时才出现在面板里
+    const props = showAll
       ? group.properties
-      : group.properties.filter(p => p.modified || !isEmptyValue(p.name, p.value));
-    if (filtered.length === 0) continue;
-    visibleGroups.push({ name: group.name, props: filtered });
+      : group.properties.filter(p =>
+          !FLEX_DETAIL_KEYS.includes(p.name) && (p.modified || !isEmptyValue(p.name, p.value)));
+    if (props.length === 0) continue;
+    visibleGroups.push({ name: group.name, props });
   }
 
   return (
@@ -37,10 +58,14 @@ export function StylePanel({
       {visibleGroups.map(({ name, props }, groupIndex) => {
         // 布局相关属性抽出来交给 LayoutControls，其余照常两列排布
         const layoutValues: Record<string, string> = {};
+        const layoutSize: Record<string, SizeMode> = {};
+        const layoutParent: Record<string, 'row' | 'column' | 'block'> = {};
         const list = name === 'Layout'
           ? props.filter(p => {
               if (!LAYOUT_KEYS.includes(p.name)) return true;
               layoutValues[p.name] = p.value;
+              if (p.sizeMode) layoutSize[p.name] = p.sizeMode;
+              if (p.parentAxis) layoutParent[p.name] = p.parentAxis;
               return false;
             })
           : props;
@@ -69,18 +94,23 @@ export function StylePanel({
               <select
                 value={colorFormat}
                 onChange={e => setColorFormat(e.target.value as ColorFormat)}
-                style={{
-                  marginLeft: 'auto', height: 20, padding: '0 4px',
-                  fontFamily: 'inherit', fontSize: 10,
-                  border: '1px solid var(--delab-border, rgba(0,0,0,0.08))',
-                  borderRadius: 5, background: 'var(--delab-field-bg, #ffffff)',
-                  color: 'var(--delab-text-secondary, #57575e)',
-                  cursor: 'pointer', outline: 'none',
-                }}
+                style={{ ...headerSelectStyle, marginLeft: 'auto' }}
               >
                 <option value="hex">Hex</option>
                 <option value="rgb">RGB</option>
                 <option value="hsl">HSL</option>
+              </select>
+            )}
+            {layoutValues.display !== undefined && (
+              <select
+                value={DISPLAY_OPTIONS.includes(layoutValues.display) ? layoutValues.display : ''}
+                onChange={e => onCommit('display', e.target.value)}
+                style={{ ...headerSelectStyle, marginLeft: 'auto' }}
+              >
+                {!DISPLAY_OPTIONS.includes(layoutValues.display) && (
+                  <option value="">{layoutValues.display}</option>
+                )}
+                {DISPLAY_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
               </select>
             )}
           </div>
@@ -93,6 +123,13 @@ export function StylePanel({
                 wrap={layoutValues['flex-wrap'] ?? 'nowrap'}
                 justify={layoutValues['justify-content'] ?? 'normal'}
                 align={layoutValues['align-items'] ?? 'normal'}
+                gap={layoutValues.gap ?? '0'}
+                width={layoutValues.width ?? ''}
+                height={layoutValues.height ?? ''}
+                widthMode={layoutSize.width ?? 'fixed'}
+                heightMode={layoutSize.height ?? 'fixed'}
+                widthParent={layoutParent.width ?? 'block'}
+                heightParent={layoutParent.height ?? 'block'}
                 onCommit={onCommit}
               />
             )}

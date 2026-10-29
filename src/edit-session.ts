@@ -2,6 +2,9 @@
 
 import { applyInline, readInline, readInlinePriority } from './style-writer';
 
+/** 语义性取值：跟随父级或内容变化，计算值相同也算一次真实编辑 */
+const SEMANTIC_VALUE = /%|^auto$|^(fit-content|max-content|min-content)$|^stretch$/;
+
 interface EditRecord {
   /** Inline value before the first edit; null means the value came from a stylesheet */
   originalInline: string | null;
@@ -34,6 +37,8 @@ export class EditSession {
       : readInlinePriority(this.element, prop);
     // 首次编辑前读一次有效样式；此时还没有 inline 覆盖，读到的是样式表里的值
     const originalComputed = existing ? existing.originalComputed : this.computed(prop);
+    /** 本次写入前元素上的内联值，用于判断是不是从百分比 / 关键字切回固定值 */
+    const previousInline = readInline(this.element, prop);
 
     if (!this.snapshotTaken) {
       this.styleSnapshot = this.element.getAttribute('style');
@@ -42,8 +47,14 @@ export class EditSession {
 
     if (!applyInline(this.element, prop, value)) return false;
 
+    // 百分比 / 关键字是语义性取值（跟随父级变化），当前计算值相同也要保留：
+    // 例如 block 子元素本来就占满父宽，写入 width: 100% 后计算值不变，但行为已变成「填充容器」
+    const semantic = SEMANTIC_VALUE.test(value.trim());
+    // 反向同理：从 100% / fit-content 切回 680px 是明确的行为变更，计算值相同也要保留
+    const pinned = SEMANTIC_VALUE.test(previousInline) && !semantic;
+
     // 输入值与原来的有效样式等价（只进了录入状态、没真改）：撤销 inline，不计入修改
-    if (originalComputed && this.computed(prop) === originalComputed) {
+    if (!semantic && !pinned && originalComputed && this.computed(prop) === originalComputed) {
       if (originalInline) {
         this.element.style.setProperty(prop, originalInline, originalPriority);
       } else {

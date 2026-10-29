@@ -2,26 +2,10 @@
 
 import { useState, useCallback, useMemo, useEffect } from 'react';
 import {
-  StyleProperty, ColorFormat, SizeMode, displayLabel, formatColor, getAlpha, withAlpha,
+  StyleProperty, ColorFormat, displayLabel, formatColor, getAlpha, withAlpha,
 } from '../style-extractor';
 import { PropertyField, FieldSpec } from './PropertyField';
 import { CopyIcon, ResetIcon } from './Icon';
-
-/** 尺寸三态图标：固定 / 贴合内容 / 撑满 */
-const SIZE_MODES: Array<{ value: SizeMode; label: string; icon: React.ReactNode }> = [
-  { value: 'fixed', label: '固定尺寸', icon: <rect x="4" y="4" width="16" height="16" rx="2" /> },
-  {
-    value: 'hug',
-    label: '贴合内容',
-    icon: (
-      <>
-        <rect x="2.5" y="2.5" width="19" height="19" rx="3" strokeDasharray="3 2.5" />
-        <rect x="8" y="8" width="8" height="8" rx="1.5" />
-      </>
-    ),
-  },
-  { value: 'fill', label: '撑满父级', icon: <path d="M3 12h18M7 8l-4 4 4 4M17 8l4 4-4 4" /> },
-];
 
 interface PropertyRowProps {
   property: StyleProperty;
@@ -79,24 +63,6 @@ export function PropertyRow({ property, isColorGroup, colorFormat, onCommit, onR
     }
   }, [onReset, property.parts, property.cssProps]);
 
-  /** 尺寸行为切换：固定 / 贴合内容 / 撑满父级 */
-  const setSizeMode = useCallback((mode: SizeMode) => {
-    const cssProp = property.cssProps[0];
-    const isWidth = cssProp === 'width';
-    if (mode === 'hug') {
-      onCommit(cssProp, 'fit-content');
-      return;
-    }
-    if (mode === 'fill') {
-      // 主轴方向靠 flex，交叉轴方向靠 align-self
-      onCommit(isWidth ? 'flex' : 'align-self', isWidth ? '1 1 0' : 'stretch');
-      return;
-    }
-    const num = parseFloat(property.value);
-    onCommit(cssProp, Number.isFinite(num) ? `${Math.round(num * 100) / 100}px` : property.value);
-    onCommit(isWidth ? 'flex' : 'align-self', isWidth ? '0 1 auto' : 'auto');
-  }, [onCommit, property.cssProps, property.value]);
-
   return (
     <div
       onMouseEnter={() => setHover(true)}
@@ -127,30 +93,6 @@ export function PropertyRow({ property, isColorGroup, colorFormat, onCommit, onR
         >
           {displayLabel(property.name)}
         </span>
-        {property.sizeMode && SIZE_MODES.map(mode => {
-          const active = property.sizeMode === mode.value;
-          return (
-            <button
-              key={mode.value}
-              type="button"
-              title={mode.label}
-              aria-label={mode.label}
-              onClick={() => setSizeMode(mode.value)}
-              style={{
-                width: 16, height: 16, padding: 0, flexShrink: 0,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                border: 'none', borderRadius: 3, background: 'transparent',
-                color: active ? 'var(--delab-accent, #32f08c)' : 'var(--delab-text-tertiary, #8a8a90)',
-                cursor: 'pointer',
-              }}
-            >
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
-                {mode.icon}
-              </svg>
-            </button>
-          );
-        })}
         {hover && (
           property.modified ? (
             <IconButton title="Reset to original" onClick={handleReset}>

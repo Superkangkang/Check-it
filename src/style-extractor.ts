@@ -33,6 +33,8 @@ export interface StyleProperty {
   parts?: StylePart[];
   /** 宽度 / 高度当前的行为，供尺寸三态按钮显示 */
   sizeMode?: SizeMode;
+  /** 父级是横向 flex / 纵向 flex / 普通块，决定 Fill 写 flex 还是百分比 */
+  parentAxis?: 'row' | 'column' | 'block';
 }
 
 /** One editable sub-value of a multi-value property */
@@ -53,6 +55,7 @@ interface RawProperty {
   isColor: boolean;
   parts?: StylePart[];
   sizeMode?: SizeMode;
+  parentAxis?: 'row' | 'column' | 'block';
 }
 
 interface RawGroup {
@@ -295,6 +298,9 @@ export class StyleExtractor {
           sizeMode: prop === 'width' || prop === 'height'
             ? this.sizeModeOf(target, prop, c)
             : undefined,
+          parentAxis: prop === 'width' || prop === 'height'
+            ? this.parentAxisOf(target)
+            : undefined,
         });
       }
 
@@ -332,22 +338,34 @@ export class StyleExtractor {
       ...meta,
       parts: p.parts,
       sizeMode: p.sizeMode,
+      parentAxis: p.parentAxis,
       modified,
       original: session ? session.originalOf(primary) : null,
     };
   }
 
-  /** 判断宽 / 高当前是固定、贴合内容还是撑满父级 */
+  /** 父级的布局方向：横向 flex / 纵向 flex / 普通块 */
+  private parentAxisOf(target: Element): 'row' | 'column' | 'block' {
+    const parent = target.parentElement;
+    if (!parent) return 'block';
+    const pc = getComputedStyle(parent);
+    if (!/flex|grid/.test(pc.display)) return 'block';
+    return (pc.flexDirection || 'row').startsWith('row') ? 'row' : 'column';
+  }
+
   private sizeModeOf(target: Element, prop: 'width' | 'height', c: CSSStyleDeclaration): SizeMode {
     const inline = (target as HTMLElement).style?.getPropertyValue(prop).trim() ?? '';
     if (/^(fit-content|max-content|min-content)$/.test(inline)) return 'hug';
+    // 百分比宽度 / 高度即「填充父级」
+    if (/%$/.test(inline)) return 'fill';
 
     const grow = parseFloat(c.getPropertyValue('flex-grow')) || 0;
-    const isRow = (c.getPropertyValue('flex-direction') || 'row').startsWith('row');
     const stretched = c.getPropertyValue('align-self') === 'stretch';
+    // 方向要看父级：flex-direction 只对容器有意义
+    const axis = this.parentAxisOf(target);
 
-    if (prop === 'width') return isRow && grow > 0 ? 'fill' : 'fixed';
-    return (!isRow && grow > 0) || stretched ? 'fill' : 'fixed';
+    if (prop === 'width') return axis === 'row' && grow > 0 ? 'fill' : 'fixed';
+    return (axis === 'column' && grow > 0) || (axis === 'row' && stretched) ? 'fill' : 'fixed';
   }
 
   /** Four-side sub-fields for margin / padding. */
@@ -491,7 +509,8 @@ export function isEmptyValue(name: string, value: string): boolean {
   if (name === 'flex-shrink') return v === '1';
   if (name === 'flex-basis') return v === 'auto';
   // 盒模型 / 间距类：0 视为没设置；top / left 之类的 0 仍然有意义
-  if (/^(margin|padding|gap|row-gap|column-gap|border-radius|border-width|letter-spacing)/.test(name)
+  // margin / padding 例外：0px 也常驻展示，方便直接改
+  if (/^(gap|row-gap|column-gap|border-radius|border-width|letter-spacing)/.test(name)
       && (v === '0px' || v === '0')) return true;
   if (v === 'none' || v === 'normal' || v === 'auto' ||
       v === 'start' || v === 'row' || v === 'nowrap' ||
