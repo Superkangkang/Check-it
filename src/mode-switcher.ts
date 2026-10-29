@@ -65,6 +65,12 @@ export class ModeSwitcher {
         color: var(--delab-glass-text, #ececee);
         background: var(--delab-row-hover, rgba(255, 255, 255, 0.05));
       }
+      /* 去掉浏览器默认的蓝色焦点框，键盘聚焦时改用品牌绿描边 */
+      #delab-mode-switcher button:focus { outline: none; }
+      #delab-mode-switcher button:focus-visible {
+        outline: 2px solid var(--delab-accent, #32f08c);
+        outline-offset: -2px;
+      }
       /* 激活态：反转色胶囊（对应站点 Export 按钮的黑白反转） */
       #delab-mode-switcher button[data-active='true'] {
         color: var(--delab-btn-text, #0b0b0c);

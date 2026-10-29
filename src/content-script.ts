@@ -21,7 +21,6 @@ import {
   loadComments,
   pageKey,
   patchThread,
-  removeThread,
   saveThread,
   toMarkdown,
 } from './comment-store';
@@ -85,7 +84,6 @@ class DelabApp {
     this.popover = new CommentPopover(root, {
       onSubmit: body => { void this.submitComment(body); },
       onToggleResolve: thread => { void this.toggleResolve(thread); },
-      onDelete: thread => { void this.deleteComment(thread); },
       onCopyAll: () => { void this.handleCopyAll(); },
       onPreviewImage: dataUrl => this.lightbox.show(dataUrl),
       onDismiss: () => this.restoreCommentButton(),
@@ -111,7 +109,6 @@ class DelabApp {
       onResetAll: this.handleResetAll,
       onLocateComment: id => this.locateComment(id),
       onToggleResolveComment: thread => { void this.toggleResolve(thread); },
-      onDeleteComment: thread => { void this.deleteComment(thread); },
       onCopyAllComments: () => { void this.handleCopyAll(); },
       onPreviewCommentImage: dataUrl => this.lightbox.show(dataUrl),
     });
@@ -240,15 +237,22 @@ class DelabApp {
     const key = e.key.toLowerCase();
     if (key === 'a') {
       e.preventDefault();
-      this.setMode('browse');
+      this.switchModeByKey('browse');
     } else if (key === 'c') {
       e.preventDefault();
-      this.setMode('inspect');
+      this.switchModeByKey('inspect');
     } else if (key === 'm') {
       e.preventDefault();
-      this.setMode('comment');
+      this.switchModeByKey('comment');
     }
   };
+
+  /** 快捷键切换：把焦点从切换器按钮移开，避免原按钮残留焦点描边 */
+  private switchModeByKey(mode: DelabMode) {
+    this.setMode(mode);
+    const active = this.shadowHost.getRoot().activeElement as HTMLElement | null;
+    if (active && active.closest('#delab-mode-switcher')) active.blur();
+  }
 
   /** 面板里是否正在编辑数值输入框 */
   private isEditingField(): boolean {
@@ -261,7 +265,6 @@ class DelabApp {
   private handleMouseOver = (e: MouseEvent) => {
     const target = e.target as Element;
     if (target === document.body || target === document.documentElement) {
-      // 评论模式悬停标签跟随光标，移出元素后收起
       if (this.mode === 'comment') this.glassLabel.hide();
       return;
     }
@@ -271,9 +274,7 @@ class DelabApp {
     if (target === this.lockedTarget) this.hoverFinder.hide();
     else this.hoverFinder.show(target);
 
-    // 评论模式：悬停即显示标签，明确即将评论的对象（弹层打开时保持钉住不动）
-    if (this.mode === 'comment' && !this.popover.isOpen()) this.glassLabel.show(target);
-
+    // 评论模式只高亮对象、不显示类名标签
     // 锁定后盒模型保持显示在选中元素上，不跟随悬停
     if (this.lockedTarget) return;
 
@@ -295,14 +296,13 @@ class DelabApp {
     e.preventDefault();
     e.stopPropagation();
 
-    // 评论模式：点击即评论，直接弹出输入框
+    // 评论模式：点击即评论，直接弹出输入框（不显示类名标签）
     if (this.mode === 'comment') {
       this.stateManager.setState(InspectState.LOCKED);
       this.lockedTarget = target;
       this.session = null;
       this.selectionFinder.show(target);
       this.boxModelOverlay.show(target);
-      this.glassLabel.pin(target);
       this.commentButton.hide();
       this.startCommentOn(target);
       return;
@@ -329,7 +329,7 @@ class DelabApp {
     const identity = describeElement(target);
     this.composing = { target, identity };
     this.commentButton.hide();
-    this.popover.openComposer(target, identity);
+    this.popover.openComposer(target);
   }
 
   private async openComments() {
@@ -351,14 +351,18 @@ class DelabApp {
       return;
     }
 
+    // 已解决的评论视为处理完毕：气泡与面板列表一起收起，编号仍按原始顺序
     this.pins.render(
-      this.comments.map((thread, index) => ({
-        id: thread.id,
-        index: index + 1,
-        identity: thread.identity,
-        active: thread.id === this.activeCommentId,
-        onClick: (id: string) => this.openThread(id),
-      }))
+      this.comments
+        .map((thread, index) => ({ thread, index: index + 1 }))
+        .filter(({ thread }) => !thread.resolved)
+        .map(({ thread, index }) => ({
+          id: thread.id,
+          index,
+          identity: thread.identity,
+          active: thread.id === this.activeCommentId,
+          onClick: (id: string) => this.openThread(id),
+        }))
     );
   }
 
@@ -393,7 +397,6 @@ class DelabApp {
 
     const target = this.pins.getTarget(id);
     if (!target) return;
-    this.glassLabel.pin(target);
     this.selectionFinder.show(target);
     this.commentButton.hide();
     this.popover.openThread(target, thread, index + 1);
@@ -414,7 +417,6 @@ class DelabApp {
     }
 
     this.activeCommentId = id;
-    this.glassLabel.pin(target);
     this.selectionFinder.show(target);
     this.commentButton.hide();
     this.refreshCommentsUI();
@@ -432,14 +434,6 @@ class DelabApp {
     if (updated && target && this.popover.isOpen()) {
       this.popover.openThread(target, updated, index + 1);
     }
-  }
-
-  private async deleteComment(thread: CommentThread) {
-    this.comments = await removeThread(pageKey(), thread.id);
-    if (this.activeCommentId === thread.id) this.activeCommentId = null;
-    this.popover.close();
-    this.refreshCommentsUI();
-    this.restoreCommentButton();
   }
 
   private restoreCommentButton() {

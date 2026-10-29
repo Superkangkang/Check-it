@@ -6,6 +6,8 @@ interface EditRecord {
   /** Inline value before the first edit; null means the value came from a stylesheet */
   originalInline: string | null;
   originalPriority: string;
+  /** 首次编辑前该属性的有效样式，用于判断输入是否真的改变了元素表现 */
+  originalComputed: string;
   value: string;
 }
 
@@ -30,6 +32,8 @@ export class EditSession {
     const originalPriority = existing
       ? existing.originalPriority
       : readInlinePriority(this.element, prop);
+    // 首次编辑前读一次有效样式；此时还没有 inline 覆盖，读到的是样式表里的值
+    const originalComputed = existing ? existing.originalComputed : this.computed(prop);
 
     if (!this.snapshotTaken) {
       this.styleSnapshot = this.element.getAttribute('style');
@@ -38,8 +42,28 @@ export class EditSession {
 
     if (!applyInline(this.element, prop, value)) return false;
 
-    this.records.set(prop, { originalInline, originalPriority, value: value.trim() });
+    // 输入值与原来的有效样式等价（只进了录入状态、没真改）：撤销 inline，不计入修改
+    if (originalComputed && this.computed(prop) === originalComputed) {
+      if (originalInline) {
+        this.element.style.setProperty(prop, originalInline, originalPriority);
+      } else {
+        this.element.style.removeProperty(prop);
+      }
+      this.records.delete(prop);
+      if (this.records.size === 0) {
+        this.styleSnapshot = null;
+        this.snapshotTaken = false;
+      }
+      return true;
+    }
+
+    this.records.set(prop, { originalInline, originalPriority, originalComputed, value: value.trim() });
     return true;
+  }
+
+  /** 元素当前生效的样式值（简写属性可能读不到，此时返回空串） */
+  private computed(prop: string): string {
+    return getComputedStyle(this.element).getPropertyValue(prop).trim();
   }
 
   /** Revert a single property to its pre-edit state. */

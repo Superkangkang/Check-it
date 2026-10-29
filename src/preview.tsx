@@ -93,7 +93,7 @@ function App() {
       const el = selectedRef.current;
       if (!el) return;
       button.hide();
-      popoverRef.current?.openComposer(el, describeElement(el));
+      popoverRef.current?.openComposer(el);
     });
     buttonRef.current = button;
 
@@ -118,10 +118,6 @@ function App() {
         setThreads(prev => prev.map(item => (
           item.id === thread.id ? { ...item, resolved: !item.resolved } : item
         )));
-        popover.close();
-      },
-      onDelete: thread => {
-        setThreads(prev => prev.filter(item => item.id !== thread.id));
         popover.close();
       },
       // 预览页的 mock 评论没有截图，大图预览仅在生产插件里生效

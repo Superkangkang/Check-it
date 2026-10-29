@@ -34,20 +34,11 @@ interface PanelPosition {
   height: number;
 }
 
-function loadPosition(): PanelPosition {
+/** 位置不持久化：每次打开都按当前视口重算，避免窗口变小后面板落在视口外 */
+function defaultPosition(): PanelPosition {
   try {
-    const stored = localStorage.getItem('delab-panel-pos');
-    if (stored) {
-      const p = JSON.parse(stored);
-      if (typeof p.left === 'number' && typeof p.top === 'number' &&
-          typeof p.width === 'number' && typeof p.height === 'number') {
-        p.left = Math.max(0, Math.min(p.left, window.innerWidth - 100));
-        p.top = Math.max(0, Math.min(p.top, window.innerHeight - 100));
-        p.width = Math.max(MIN_WIDTH, Math.min(p.width, window.innerWidth));
-        p.height = Math.max(MIN_HEIGHT, Math.min(p.height, window.innerHeight));
-        return p;
-      }
-    }
+    // 清掉旧版本存过的位置，避免沿用过期的越界坐标
+    localStorage.removeItem('delab-panel-pos');
   } catch { /* ignore */ }
   const h = Math.floor(window.innerHeight * 0.7);
   return {
@@ -61,7 +52,7 @@ function loadPosition(): PanelPosition {
 export function FloatingPanel({
   data, mode, view = 'style', comments = [], activeCommentId = null,
   visible, onClose, onCommit, onReset, onResetAll,
-  onLocateComment, onToggleResolveComment, onDeleteComment, onCopyAllComments, onPreviewCommentImage,
+  onLocateComment, onToggleResolveComment, onCopyAllComments, onPreviewCommentImage,
 }: {
   data: StylePayload | null;
   mode: 'empty' | 'content';
@@ -76,20 +67,15 @@ export function FloatingPanel({
   onResetAll: () => void;
   onLocateComment?: (id: string) => void;
   onToggleResolveComment?: (thread: CommentThread) => void;
-  onDeleteComment?: (thread: CommentThread) => void;
   onCopyAllComments?: () => void;
   onPreviewCommentImage?: (dataUrl: string) => void;
 }) {
-  const [pos, setPos] = useState<PanelPosition>(loadPosition);
+  const [pos, setPos] = useState<PanelPosition>(defaultPosition);
   const [showAll, setShowAll] = useState(false);
 
   const dragRef = useRef({ active: false, startX: 0, startY: 0, startLeft: 0, startTop: 0 });
   const resizeRef = useRef({ active: false, startX: 0, startY: 0, startW: 0, startH: 0 });
   const resizeHandleRef = useRef<HTMLDivElement>(null);
-
-  const savePos = useCallback((p: PanelPosition) => {
-    localStorage.setItem('delab-panel-pos', JSON.stringify(p));
-  }, []);
 
   const onDragStart = useCallback((e: React.MouseEvent) => {
     if ((e.target as HTMLElement).tagName === 'BUTTON') return;
@@ -123,13 +109,19 @@ export function FloatingPanel({
       if (dragRef.current.active || resizeRef.current.active) {
         dragRef.current.active = false;
         resizeRef.current.active = false;
-        setPos(prev => { savePos(prev); return prev; });
       }
     };
     document.addEventListener('mousemove', onMove);
     document.addEventListener('mouseup', onUp);
     return () => { document.removeEventListener('mousemove', onMove); document.removeEventListener('mouseup', onUp); };
-  }, [savePos]);
+  }, []);
+
+  // 每次重新打开（visible 由 false 变 true）都回到默认位置，丢弃上次拖动的坐标
+  const prevVisible = useRef(visible);
+  useEffect(() => {
+    if (visible && !prevVisible.current) setPos(defaultPosition());
+    prevVisible.current = visible;
+  }, [visible]);
 
   if (!visible) return null;
 
@@ -149,7 +141,7 @@ export function FloatingPanel({
           fontSize: 12,
           textAlign: 'left',
           borderRadius: 12,
-          boxShadow: 'var(--delab-shadow, 0 12px 32px -4px rgba(0, 0, 0, 0.25))',
+          boxShadow: 'var(--delab-shadow-float, 0 0 0 1px rgba(0, 0, 0, 0.05), 0 8px 20px -4px rgba(0, 0, 0, 0.16), 0 24px 56px -12px rgba(0, 0, 0, 0.26))',
           border: '1px solid var(--delab-border-strong, rgba(0, 0, 0, 0.16))',
           display: 'flex', flexDirection: 'column', overflow: 'hidden',
         }}
@@ -167,7 +159,6 @@ export function FloatingPanel({
             activeId={activeCommentId}
             onLocate={id => onLocateComment?.(id)}
             onToggleResolve={thread => onToggleResolveComment?.(thread)}
-            onDelete={thread => onDeleteComment?.(thread)}
             onCopyAll={() => onCopyAllComments?.()}
             onPreview={dataUrl => onPreviewCommentImage?.(dataUrl)}
           />
@@ -249,7 +240,6 @@ export interface PanelCallbacks {
   /** 评论列表：定位到元素 */
   onLocateComment: (id: string) => void;
   onToggleResolveComment: (thread: CommentThread) => void;
-  onDeleteComment: (thread: CommentThread) => void;
   onCopyAllComments: () => void;
   /** 评论截图查看大图 */
   onPreviewCommentImage: (dataUrl: string) => void;
@@ -294,7 +284,6 @@ export class FloatingPanelManager {
         onResetAll: this.callbacks.onResetAll,
         onLocateComment: this.callbacks.onLocateComment,
         onToggleResolveComment: this.callbacks.onToggleResolveComment,
-        onDeleteComment: this.callbacks.onDeleteComment,
         onCopyAllComments: this.callbacks.onCopyAllComments,
         onPreviewCommentImage: this.callbacks.onPreviewCommentImage,
       })
