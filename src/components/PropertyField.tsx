@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { normalizeInput } from '../property-controls';
 import { toHex } from '../style-extractor';
+import { fieldShell, fieldInput, fieldAffix, splitUnit } from './field-base';
+import { Dropdown } from './Dropdown';
 
 export interface FieldSpec {
   /** Value currently applied on the page */
@@ -12,8 +14,8 @@ export interface FieldSpec {
   control: 'length' | 'number' | 'color' | 'enum' | 'text';
   unit?: string;
   options?: string[];
-  /** Tiny label rendered inside the field (T / R / B / L …) */
-  prefix?: string;
+  /** 框内前缀：短文字（T / R / X）或图标 */
+  prefix?: React.ReactNode;
   readOnly?: boolean;
   /** Display transform applied while the field is not focused (e.g. color format) */
   format?: (value: string) => string;
@@ -25,34 +27,17 @@ interface PropertyFieldProps {
   onCommit: (prop: string, value: string) => boolean;
 }
 
-const FIELD_BG = 'var(--delab-field-bg, #ffffff)';
-const FIELD_BG_HOVER = 'var(--delab-field-hover, #f3f3f5)';
-
-const baseField: React.CSSProperties = {
-  width: '100%', boxSizing: 'border-box',
-  fontFamily: "'JetBrains Mono', 'SF Mono', Menlo, monospace", fontSize: 11, lineHeight: '16px',
-  height: 28, padding: '0 8px', borderRadius: 6,
-  background: FIELD_BG,
-  color: 'var(--delab-text, #141416)',
-  border: '1px solid transparent',
-  outline: 'none', cursor: 'text', textAlign: 'left',
-};
-
-function PrefixLabel({ children }: { children: React.ReactNode }) {
-  return (
-    <span style={{
-      position: 'absolute', left: 7, top: 0, height: 28, display: 'flex', alignItems: 'center',
-      fontSize: 9, lineHeight: 1, color: 'var(--delab-text-tertiary, #8a8a90)',
-      pointerEvents: 'none', zIndex: 1,
-    }}>
-      {children}
-    </span>
-  );
-}
+/** 纯数字，或合并态的「上, 下」两个数字 */
+const NUMERIC = /^-?\d*\.?\d*(\s*,\s*-?\d*\.?\d*)?$/;
 
 export function PropertyField({ spec, onCommit }: PropertyFieldProps) {
   const { cssProp, control, unit, prefix, readOnly } = spec;
-  const [draft, setDraft] = useState(spec.value);
+  const numeric = control === 'length' || control === 'number';
+  // 数值类把单位拆出来固定在框内右侧，编辑时只需要输入数字
+  const parts = numeric ? splitUnit(spec.value) : { number: spec.value, unit: '' };
+  const writeUnit = unit ?? parts.unit;
+
+  const [draft, setDraft] = useState(parts.number);
   const [focused, setFocused] = useState(false);
   const [hover, setHover] = useState(false);
   const [invalid, setInvalid] = useState(false);
@@ -63,13 +48,13 @@ export function PropertyField({ spec, onCommit }: PropertyFieldProps) {
   // keep the field in sync with the page while it is not being edited
   useEffect(() => {
     if (!focused) {
-      setDraft(spec.value);
+      setDraft(parts.number);
       setInvalid(false);
     }
-  }, [spec.value, focused]);
+  }, [spec.value, focused, parts.number]);
 
   const commit = (raw: string): boolean => {
-    const value = normalizeInput(raw, unit);
+    const value = normalizeInput(raw, writeUnit);
     if (!value) return false;
     return onCommit(cssProp, value);
   };
@@ -84,7 +69,7 @@ export function PropertyField({ spec, onCommit }: PropertyFieldProps) {
     setFocused(false);
     if (!commit(draft)) {
       // discard an invalid value and fall back to the page's value
-      setDraft(spec.value);
+      setDraft(parts.number);
       setInvalid(false);
     }
   };
@@ -108,7 +93,7 @@ export function PropertyField({ spec, onCommit }: PropertyFieldProps) {
       // undo the live edits made during this focus session
       const original = focusValueRef.current;
       if (original && original !== draft) commit(original);
-      setDraft(original);
+      setDraft(parts.number);
       setInvalid(false);
       inputRef.current?.blur();
     } else if ((e.key === 'ArrowUp' || e.key === 'ArrowDown') &&
@@ -118,48 +103,27 @@ export function PropertyField({ spec, onCommit }: PropertyFieldProps) {
     }
   };
 
-  const borderColor = invalid
-    ? 'var(--delab-danger, #e5484d)'
-    : focused
-      ? 'var(--delab-accent, #32f08c)'
-      : hover
-        ? 'var(--delab-field-border, rgba(0,0,0,0.12))'
-        : 'transparent';
+  const shell = (extra?: React.CSSProperties): React.CSSProperties => ({
+    ...fieldShell({ focused, hover, invalid }),
+    ...extra,
+  });
 
-  const fieldStyle: React.CSSProperties = {
-    ...baseField,
-    background: hover && !focused ? FIELD_BG_HOVER : FIELD_BG,
-    borderColor,
-    paddingLeft: prefix ? 20 : 8,
-  };
+  // 未编辑时显示数字部分，单位作为固定后缀；编辑中只有当输入仍是纯数字时才显示后缀
+  const suffix = focused
+    ? (NUMERIC.test(draft) ? writeUnit ?? '' : '')
+    : parts.unit;
+  const shown = focused ? draft : parts.number;
 
   // ── enum ──
   if (control === 'enum' && spec.options && spec.options.length > 0) {
     return (
-      <div
-        style={{ flex: 1, minWidth: 0, position: 'relative' }}
-        onMouseEnter={() => setHover(true)}
-        onMouseLeave={() => setHover(false)}
-      >
-        {prefix && <PrefixLabel>{prefix}</PrefixLabel>}
-        <select
-          value={spec.value}
-          onChange={e => onCommit(cssProp, e.target.value)}
-          onKeyDown={e => e.stopPropagation()}
-          style={{ ...fieldStyle, cursor: 'pointer', paddingRight: 20, appearance: 'none' }}
-        >
-          {spec.options.map(opt => <option key={opt} value={opt}>{opt}</option>)}
-        </select>
-        <svg
-          width="8" height="8" viewBox="0 0 8 8" aria-hidden
-          style={{
-            position: 'absolute', right: 6, top: '50%', marginTop: -4,
-            pointerEvents: 'none', color: 'var(--delab-text-tertiary, #8a8a90)',
-          }}
-        >
-          <path d="M1 3l3 3 3-3" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-      </div>
+      <Dropdown
+        value={spec.value}
+        items={spec.options.map(opt => ({ value: opt, label: opt }))}
+        onChange={value => onCommit(cssProp, value)}
+        prefix={prefix}
+        title={`${cssProp}: ${spec.value}`}
+      />
     );
   }
 
@@ -167,10 +131,9 @@ export function PropertyField({ spec, onCommit }: PropertyFieldProps) {
   if (control === 'color') {
     const hex = toHex(spec.value);
     const swatch = /^#[0-9a-fA-F]{6}$/.test(hex) ? hex : '#000000';
-    const shown = focused ? draft : (spec.format ? spec.format(spec.value) : spec.value);
     return (
       <div
-        style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', position: 'relative' }}
+        style={shell()}
         onMouseEnter={() => setHover(true)}
         onMouseLeave={() => setHover(false)}
       >
@@ -180,35 +143,43 @@ export function PropertyField({ spec, onCommit }: PropertyFieldProps) {
           onChange={e => { setDraft(e.target.value); commit(e.target.value); }}
           title="Pick a color"
           style={{
-            position: 'absolute', left: 4, top: 5, width: 14, height: 14,
-            padding: 0, border: '1px solid rgba(127,127,127,0.45)', borderRadius: 3,
-            background: 'none', cursor: 'pointer', zIndex: 1,
+            flexShrink: 0, width: 14, height: 14, padding: 0,
+            border: '1px solid rgba(127,127,127,0.45)', borderRadius: 3,
+            background: 'none', cursor: 'pointer',
           }}
         />
         <input
           ref={inputRef}
           type="text"
-          value={shown}
+          value={focused ? draft : (spec.format ? spec.format(spec.value) : spec.value)}
           onChange={e => handleChange(e.target.value)}
-          onFocus={e => { setFocused(true); focusValueRef.current = spec.value; setDraft(spec.value); }}
+          onFocus={e => { setFocused(true); focusValueRef.current = spec.value; setDraft(spec.value); e.target.select(); }}
           onBlur={handleBlur}
           onKeyDown={handleKeyDown}
           spellCheck={false}
-          style={{ ...fieldStyle, paddingLeft: 28 }}
+          style={fieldInput}
         />
       </div>
     );
   }
 
-  // ── read-only (e.g. detected font) ──
+  // ── read-only (e.g. detected font)：灰底弱文字，明确表示不可编辑 ──
   if (readOnly) {
     return (
-      <div style={{ flex: 1, minWidth: 0 }}>
+      <div style={{
+        ...fieldShell(),
+        background: 'var(--delab-sel, rgba(0,0,0,0.07))',
+        cursor: 'default',
+      }}>
         <input
           readOnly
           value={spec.value}
           title={spec.value}
-          style={{ ...baseField, background: 'transparent', cursor: 'default', color: 'var(--delab-text-secondary, #57575e)' }}
+          style={{
+            ...fieldInput,
+            cursor: 'default',
+            color: 'var(--delab-text-tertiary, #8a8a90)',
+          }}
         />
       </div>
     );
@@ -217,23 +188,24 @@ export function PropertyField({ spec, onCommit }: PropertyFieldProps) {
   // ── text / length / number ──
   return (
     <div
-      style={{ flex: 1, minWidth: 0, position: 'relative' }}
+      style={shell()}
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
     >
-      {prefix && <PrefixLabel>{prefix}</PrefixLabel>}
+      {prefix && <span style={fieldAffix}>{prefix}</span>}
       <input
         ref={inputRef}
         type="text"
-        value={focused ? draft : spec.value}
+        value={shown}
         onChange={e => handleChange(e.target.value)}
-        onFocus={e => { setFocused(true); focusValueRef.current = spec.value; setDraft(spec.value); e.target.select(); }}
+        onFocus={e => { setFocused(true); focusValueRef.current = spec.value; setDraft(parts.number); e.target.select(); }}
         onBlur={handleBlur}
         onKeyDown={handleKeyDown}
         spellCheck={false}
         title={spec.value}
-        style={fieldStyle}
+        style={fieldInput}
       />
+      {suffix && <span style={fieldAffix}>{suffix}</span>}
     </div>
   );
 }

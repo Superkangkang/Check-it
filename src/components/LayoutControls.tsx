@@ -1,8 +1,10 @@
 // DeLab Layout Controls — 对齐 Figma 自动布局的方向分段、宽高尺寸与对齐九宫格
 
 import { useEffect, useRef, useState } from 'react';
-import { MONO } from '../theme-context';
 import { SizeMode } from '../style-extractor';
+import { fieldShell, fieldInput, fieldAffix, splitUnit } from './field-base';
+import { MenuPanel } from './Dropdown';
+import { FieldIcon } from './Icon';
 
 interface LayoutControlsProps {
   display: string;
@@ -31,8 +33,8 @@ const DIRECTIONS: Array<{ value: string; path: string; label: string }> = [
 /** 主轴分布类值：这些值下 gap 由浏览器自动撑开，输入框显示 auto */
 const DISTRIBUTIONS = ['space-between', 'space-around', 'space-evenly'];
 
-const JUSTIFY_VALUES = ['flex-start', 'center', 'flex-end'];
-const ALIGN_VALUES = ['flex-start', 'center', 'flex-end'];
+/** 九宫格 0 / 1 / 2 对应的 flex 值 */
+const ALIGN_STEPS = ['flex-start', 'center', 'flex-end'];
 
 /** 归一 CSS 计算值到九宫格的列（0 左 / 1 中 / 2 右），分布类返回 -1 */
 function colIndex(justify: string): number {
@@ -67,8 +69,18 @@ export function LayoutControls({
   const managed = isFlex || isGrid;
   const wrapped = wrap.trim().startsWith('wrap');
 
-  const col = colIndex(justify);
-  const row = rowIndex(align);
+  // 九宫格是「元素在容器里的视觉位置」，纵排时主轴变成垂直方向，
+  // 行对应 justify、列对应 align，需要换轴；反向排列再镜像一次。
+  const isColumn = isFlex && direction.trim().startsWith('column');
+  const reversed = isFlex && direction.trim().endsWith('reverse');
+
+  const mainIndex = colIndex(justify);   // 主轴（justify）落在哪个位置
+  const crossIndex = rowIndex(align);    // 交叉轴（align）落在哪个位置
+  const mainVisual = mainIndex === -1 || !reversed ? mainIndex : 2 - mainIndex;
+
+  const col = isColumn ? crossIndex : mainVisual;   // 水平：0 左 / 1 中 / 2 右
+  const row = isColumn ? mainVisual : crossIndex;   // 垂直：0 上 / 1 中 / 2 下
+
   const autoGap = DISTRIBUTIONS.includes(justify.trim());
   // 未设置间距时 computed 值是 normal，按 0 展示
   const gapValue = gap.trim() === 'normal' || !gap.trim() ? '0' : gap.trim();
@@ -80,71 +92,15 @@ export function LayoutControls({
   };
 
   const setCell = (r: number, c: number) => {
-    onCommit('justify-content', JUSTIFY_VALUES[c]);
-    onCommit('align-items', ALIGN_VALUES[r]);
+    const mainVisual = isColumn ? r : c;
+    const crossVisual = isColumn ? c : r;
+    const main = ALIGN_STEPS[reversed ? 2 - mainVisual : mainVisual];
+    onCommit('justify-content', main);
+    onCommit('align-items', ALIGN_STEPS[crossVisual]);
   };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-      {/* 方向 + 换行：仅 flex 系列 */}
-      {isFlex && (
-        <div>
-          <span style={labelStyle}>direction</span>
-          <div style={{
-            display: 'flex', gap: 2, padding: 2, borderRadius: 8,
-            background: 'var(--delab-sel, rgba(0, 0, 0, 0.07))',
-          }}>
-            {DIRECTIONS.map(item => {
-              const active = direction.trim() === item.value;
-              return (
-                <button
-                  key={item.value}
-                  type="button"
-                  title={item.label}
-                  aria-label={item.label}
-                  onClick={() => setDirection(item.value)}
-                  style={{
-                    flex: 1, height: 24, padding: 0,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    border: 'none', borderRadius: 6, cursor: 'pointer',
-                    background: active ? 'var(--delab-btn-bg, #141416)' : 'transparent',
-                    color: active ? 'var(--delab-btn-text, #ffffff)' : 'var(--delab-text-secondary, #57575e)',
-                    transition: 'background 0.12s ease, color 0.12s ease',
-                  }}
-                >
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                    strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                    <path d={item.path} />
-                  </svg>
-                </button>
-              );
-            })}
-            {/* 换行开关，对应 Figma 自动布局的方向选项里的「换行」 */}
-            <button
-              type="button"
-              title={wrapped ? '取消换行' : '换行'}
-              aria-label={wrapped ? '取消换行' : '换行'}
-              onClick={() => onCommit('flex-wrap', wrapped ? 'nowrap' : 'wrap')}
-              style={{
-                flex: 1, height: 24, padding: 0,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                border: 'none', borderRadius: 6, cursor: 'pointer',
-                background: wrapped ? 'var(--delab-btn-bg, #141416)' : 'transparent',
-                color: wrapped ? 'var(--delab-btn-text, #ffffff)' : 'var(--delab-text-secondary, #57575e)',
-                transition: 'background 0.12s ease, color 0.12s ease',
-              }}
-            >
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                <path d="M3 5h18" />
-                <path d="M3 12h11a3.5 3.5 0 0 1 0 7H9" />
-                <path d="m12 16-3 3 3 3" />
-              </svg>
-            </button>
-          </div>
-        </div>
-      )}
-
       {/* 宽高：数值输入 + 右侧尺寸模式（固定 / 适应 / 填充） */}
       <div style={{ display: 'flex', gap: 8 }}>
         <SizeRow axis="width" parent={widthParent} value={width} mode={widthMode} onCommit={onCommit} />
@@ -153,37 +109,54 @@ export function LayoutControls({
 
       {/* 对齐：flex / grid 容器才有意义 */}
       {managed && (
-        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
-          <div>
+        <div style={{ display: 'flex', alignItems: 'stretch', gap: 8 }}>
+          <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
             <span style={labelStyle}>alignment</span>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 22px)', gap: 2 }}>
+            {/* 线框包裹九宫格：宽度撑满左列，高度与右列（direction + gap）对齐 */}
+            <div style={{
+              flex: 1, minHeight: 0,
+              display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gridTemplateRows: 'repeat(3, 1fr)', gap: 2,
+              padding: 3, borderRadius: 8, boxSizing: 'border-box',
+              border: '1px solid var(--delab-border, rgba(0,0,0,0.08))',
+              background: 'var(--delab-field-bg, #ffffff)',
+            }}>
               {[0, 1, 2].map(r => [0, 1, 2].map(c => {
-                const strong = col === c && row === r;
+                const strong = !autoGap && col === c && row === r;
                 // 交叉轴对齐是 stretch / baseline 时无法落格，先弱高亮主轴所在列
-                const weak = !strong && row === -1 && col === c;
-                const active = strong || weak;
+                const weak = !autoGap && !strong && row === -1 && col === c;
+                // 间距 auto：主轴被分布接管，交叉轴选中的整条都画成元素块，
+                // 一排三个块正好表示元素被撑开分布
+                const distributed = autoGap && (isColumn ? c === col : r === row);
+                const filled = strong || weak || distributed;
+                const label = `${['上', '居中', '下'][r]}${['左', '中', '右'][c]}`;
                 return (
                   <button
                     key={`${r}-${c}`}
                     type="button"
-                    title={`${['上', '居中', '下'][r]}${['左', '中', '右'][c]}`}
-                    aria-label={`${['上', '居中', '下'][r]}${['左', '中', '右'][c]}`}
-                    onClick={() => setCell(r, c)}
+                    title={autoGap ? `${isColumn ? '左右' : '上下'}对齐：${label.slice(-1)}` : label}
+                    aria-label={label}
+                    onClick={() => {
+                      // 分布态下主轴已被 space-between 占用，只能调交叉轴
+                      if (autoGap) onCommit('align-items', ALIGN_STEPS[isColumn ? c : r]);
+                      else setCell(r, c);
+                    }}
                     style={{
-                      width: 22, height: 22, padding: 0,
+                      width: '100%', height: '100%', padding: 0,
+                      border: 'none', borderRadius: 4, background: 'transparent',
+                      cursor: 'pointer',
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      borderRadius: 4, cursor: 'pointer',
-                      border: `1px solid ${active ? 'var(--delab-accent, #32f08c)' : 'var(--delab-border, rgba(0,0,0,0.08))'}`,
-                      background: active
-                        ? `var(--delab-accent-soft, rgba(50,240,140,0.14))`
-                        : 'transparent',
-                      opacity: strong || !weak ? 1 : 0.55,
-                      transition: 'background 0.12s ease, border-color 0.12s ease',
                     }}
                   >
+                    {/* 选中位置用实心块，其余是位置点；横排分布时块转成竖条 */}
                     <span style={{
-                      width: 4, height: 4, borderRadius: 999,
-                      background: active ? 'var(--delab-accent, #32f08c)' : 'var(--delab-text-tertiary, #8a8a90)',
+                      width: filled ? (autoGap && !isColumn ? 8 : 14) : 4,
+                      height: filled ? (autoGap && !isColumn ? 14 : 8) : 4,
+                      borderRadius: filled ? 2 : 999,
+                      background: filled
+                        ? 'var(--delab-text, #141416)'
+                        : 'var(--delab-text-tertiary, #8a8a90)',
+                      opacity: weak ? 0.4 : 1,
+                      transition: 'all 0.12s ease',
                     }} />
                   </button>
                 );
@@ -191,19 +164,65 @@ export function LayoutControls({
             </div>
           </div>
 
-          <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {isFlex && (
+              <div>
+                <span style={labelStyle}>direction</span>
+                <div style={{
+                  display: 'flex', gap: 2, padding: 2, borderRadius: 8,
+                  background: 'var(--delab-sel, rgba(0, 0, 0, 0.07))',
+                }}>
+                  {DIRECTIONS.map(item => {
+                    const active = direction.trim() === item.value;
+                    return (
+                      <button
+                        key={item.value}
+                        type="button"
+                        title={item.label}
+                        aria-label={item.label}
+                        onClick={() => setDirection(item.value)}
+                        style={{
+                          flex: 1, height: 24, padding: 0,
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          border: 'none', borderRadius: 6, cursor: 'pointer',
+                          background: active ? 'var(--delab-btn-bg, #141416)' : 'transparent',
+                          color: active ? 'var(--delab-btn-text, #ffffff)' : 'var(--delab-text-secondary, #57575e)',
+                          transition: 'background 0.12s ease, color 0.12s ease',
+                        }}
+                      >
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                          strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                          <path d={item.path} />
+                        </svg>
+                      </button>
+                    );
+                  })}
+                  {/* 换行开关，对应 Figma 自动布局方向里的「换行」 */}
+                  <button
+                    type="button"
+                    title={wrapped ? '取消换行' : '换行'}
+                    aria-label={wrapped ? '取消换行' : '换行'}
+                    onClick={() => onCommit('flex-wrap', wrapped ? 'nowrap' : 'wrap')}
+                    style={{
+                      flex: 1, height: 24, padding: 0,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      border: 'none', borderRadius: 6, cursor: 'pointer',
+                      background: wrapped ? 'var(--delab-btn-bg, #141416)' : 'transparent',
+                      color: wrapped ? 'var(--delab-btn-text, #ffffff)' : 'var(--delab-text-secondary, #57575e)',
+                      transition: 'background 0.12s ease, color 0.12s ease',
+                    }}
+                  >
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                      strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                      <path d="M3 5h18" />
+                      <path d="M3 12h11a3.5 3.5 0 0 1 0 7H9" />
+                      <path d="m12 16-3 3 3 3" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            )}
             <GapField gap={gapValue} auto={autoGap} onCommit={onCommit} />
-            {/* 没有落在九宫格上的值（stretch / baseline / 自定义）直接显示出来 */}
-            {col === -1 && !autoGap && (
-              <div style={{ marginTop: 4, fontFamily: MONO, fontSize: 10, color: 'var(--delab-text-tertiary, #8a8a90)' }}>
-                justify: {justify}
-              </div>
-            )}
-            {row === -1 && (
-              <div style={{ marginTop: 2, fontFamily: MONO, fontSize: 10, color: 'var(--delab-text-tertiary, #8a8a90)' }}>
-                align: {align}
-              </div>
-            )}
           </div>
         </div>
       )}
@@ -218,7 +237,14 @@ function GapField({ gap, auto, onCommit }: {
   onCommit: (prop: string, value: string) => boolean;
 }) {
   const [draft, setDraft] = useState<string | null>(null);
+  const [focused, setFocused] = useState(false);
+  const [hover, setHover] = useState(false);
   const value = draft ?? (auto ? 'auto' : gap);
+  const parts = splitUnit(value);
+  // 编辑中给个 px 提示，提交时统一补单位
+  const suffix = draft !== null
+    ? (/^-?\d*\.?\d*$/.test(draft) ? 'px' : '')
+    : parts.unit;
 
   const commit = (raw: string) => {
     setDraft(null);
@@ -236,49 +262,46 @@ function GapField({ gap, auto, onCommit }: {
   return (
     <>
       <span style={labelStyle}>gap</span>
-      <div style={{
-        display: 'flex', alignItems: 'center', gap: 2, padding: 2, borderRadius: 8,
-        background: 'var(--delab-sel, rgba(0, 0, 0, 0.07))',
-      }}>
-        <input
-          value={value}
-          placeholder="0"
-          spellCheck={false}
-          onChange={e => setDraft(e.target.value)}
-          onFocus={e => e.target.select()}
-          onBlur={e => commit(e.target.value)}
-          onKeyDown={e => {
-            e.stopPropagation();
-            if (e.key === 'Enter') { commit(e.currentTarget.value); e.currentTarget.blur(); }
-            else if (e.key === 'Escape') { setDraft(null); e.currentTarget.blur(); }
-          }}
-          style={{
-            flex: 1, minWidth: 0, height: 24, padding: '0 6px',
-            border: 'none', borderRadius: 6,
-            background: 'var(--delab-field-bg, #ffffff)',
-            fontFamily: MONO, fontSize: 11,
-            color: 'var(--delab-text, #141416)',
-            outline: 'none',
-          }}
-        />
-        <button
-          type="button"
-          title={auto ? '改为固定间距' : '自动撑开（space-between）'}
-          onClick={() => {
-            setDraft(null);
-            onCommit('justify-content', auto ? 'flex-start' : 'space-between');
-          }}
-          style={{
-            flex: 'none', height: 24, padding: '0 8px',
-            border: 'none', borderRadius: 6, cursor: 'pointer',
-            fontFamily: 'inherit', fontSize: 10, fontWeight: 500,
-            background: auto ? 'var(--delab-btn-bg, #141416)' : 'transparent',
-            color: auto ? 'var(--delab-btn-text, #ffffff)' : 'var(--delab-text-secondary, #57575e)',
-            transition: 'background 0.12s ease, color 0.12s ease',
-          }}
-        >
-          Auto
-        </button>
+      <div
+        style={{ display: 'flex' }}
+        onMouseEnter={() => setHover(true)}
+        onMouseLeave={() => setHover(false)}
+      >
+        <div style={{ ...fieldShell({ focused, hover }), paddingRight: 2 }}>
+          <input
+            value={draft ?? parts.number}
+            placeholder="0"
+            spellCheck={false}
+            onChange={e => setDraft(e.target.value)}
+            onFocus={e => { setFocused(true); e.target.select(); }}
+            onBlur={e => { setFocused(false); commit(e.target.value); }}
+            onKeyDown={e => {
+              e.stopPropagation();
+              if (e.key === 'Enter') { commit(e.currentTarget.value); e.currentTarget.blur(); }
+              else if (e.key === 'Escape') { setDraft(null); e.currentTarget.blur(); }
+            }}
+            style={fieldInput}
+          />
+          {suffix && <span style={fieldAffix}>{suffix}</span>}
+          <button
+            type="button"
+            title={auto ? '改为固定间距' : '自动撑开（space-between）'}
+            onClick={() => {
+              setDraft(null);
+              onCommit('justify-content', auto ? 'flex-start' : 'space-between');
+            }}
+            style={{
+              flex: 'none', height: 22, padding: '0 7px',
+              border: 'none', borderRadius: 5, cursor: 'pointer',
+              fontFamily: 'inherit', fontSize: 10, fontWeight: 500,
+              background: auto ? 'var(--delab-btn-bg, #141416)' : 'transparent',
+              color: auto ? 'var(--delab-btn-text, #ffffff)' : 'var(--delab-text-secondary, #57575e)',
+              transition: 'background 0.12s ease, color 0.12s ease',
+            }}
+          >
+            Auto
+          </button>
+        </div>
       </div>
     </>
   );
@@ -300,11 +323,17 @@ function SizeRow({ axis, parent, value, mode, onCommit }: {
   onCommit: (prop: string, value: string) => boolean;
 }) {
   const [draft, setDraft] = useState<string | null>(null);
+  const [focused, setFocused] = useState(false);
+  const [hover, setHover] = useState(false);
   const [menu, setMenu] = useState<{ left: number; top: number } | null>(null);
   const btnRef = useRef<HTMLButtonElement>(null);
 
   const current = value.trim();
-  const number = current.replace(/px$/, '');
+  const { number, unit: valueUnit } = splitUnit(current);
+  // 未固定尺寸时没有单位；编辑数字期间先按 px 提示
+  const suffix = draft !== null
+    ? (/^-?\d*\.?\d*$/.test(draft) ? valueUnit || 'px' : '')
+    : valueUnit;
   const flexProp = axis === 'width' ? 'flex' : 'align-self';
   const flexReset = axis === 'width' ? '0 1 auto' : 'auto';
 
@@ -362,46 +391,35 @@ function SizeRow({ axis, parent, value, mode, onCommit }: {
     setMenu({ left: Math.max(8, r.right - 168), top: r.bottom + 4 });
   };
 
-  const items: Array<{ value: SizeMode; text: string }> = [
-    { value: 'fixed', text: `${axis === 'width' ? '固定宽度' : '固定高度'}（${number}）` },
-    { value: 'hug', text: '适应内容' },
-    { value: 'fill', text: '填充容器' },
+  const items = [
+    { value: 'fixed' as SizeMode, label: `${axis === 'width' ? '固定宽度' : '固定高度'}（${number}）` },
+    { value: 'hug' as SizeMode, label: '适应内容' },
+    { value: 'fill' as SizeMode, label: '填充容器' },
   ];
 
   return (
-    <div style={{
-      flex: 1, minWidth: 0,
-      display: 'flex', alignItems: 'center', gap: 2,
-      height: 28, padding: '0 4px 0 6px', boxSizing: 'border-box',
-      borderRadius: 6,
-      background: 'var(--delab-field-bg, #ffffff)',
-      border: '1px solid var(--delab-border, rgba(0,0,0,0.08))',
-    }}>
-      <span style={{
-        flexShrink: 0, fontSize: 10, lineHeight: 1,
-        color: 'var(--delab-text-tertiary, #8a8a90)',
-      }}>
-        {SIZE_LABEL[axis]}
+    <div
+      style={{ ...fieldShell({ focused, hover }), padding: '0 4px 0 7px' }}
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+    >
+      <span style={fieldAffix} title={SIZE_LABEL[axis]}>
+        <FieldIcon name={axis === 'width' ? 'width' : 'height'} />
       </span>
       <input
         value={draft ?? number}
         spellCheck={false}
         onChange={e => setDraft(e.target.value)}
-        onFocus={e => e.target.select()}
-        onBlur={e => commit(e.target.value)}
+        onFocus={e => { setFocused(true); e.target.select(); }}
+        onBlur={e => { setFocused(false); commit(e.target.value); }}
         onKeyDown={e => {
           e.stopPropagation();
           if (e.key === 'Enter') { commit(e.currentTarget.value); e.currentTarget.blur(); }
           else if (e.key === 'Escape') { setDraft(null); e.currentTarget.blur(); }
         }}
-        style={{
-          flex: 1, minWidth: 0, height: 24, padding: '0 2px',
-          border: 'none', background: 'transparent',
-          fontFamily: MONO, fontSize: 11,
-          color: 'var(--delab-text, #141416)',
-          outline: 'none',
-        }}
+        style={fieldInput}
       />
+      {suffix && <span style={fieldAffix}>{suffix}</span>}
       <button
         ref={btnRef}
         type="button"
@@ -423,35 +441,14 @@ function SizeRow({ axis, parent, value, mode, onCommit }: {
       </button>
 
       {menu && (
-        <div
-          onMouseDown={e => e.stopPropagation()}
-          style={{
-            position: 'fixed', left: menu.left, top: menu.top, width: 168,
-            padding: 4, borderRadius: 8, zIndex: 30,
-            background: 'var(--delab-field-bg, #ffffff)',
-            boxShadow: 'var(--delab-shadow, 0 8px 24px rgba(0,0,0,0.18))',
-            border: '1px solid var(--delab-border, rgba(0,0,0,0.08))',
-          }}
-        >
-          {items.map(item => (
-            <button
-              key={item.value}
-              type="button"
-              onClick={() => setMode(item.value)}
-              style={{
-                display: 'block', width: '100%', height: 26, padding: '0 8px',
-                border: 'none', borderRadius: 5, cursor: 'pointer', textAlign: 'left',
-                fontFamily: 'inherit', fontSize: 11,
-                background: mode === item.value
-                  ? 'var(--delab-row-hover, rgba(0,0,0,0.06))'
-                  : 'transparent',
-                color: 'var(--delab-text, #141416)',
-              }}
-            >
-              {item.text}
-            </button>
-          ))}
-        </div>
+        <MenuPanel
+          left={menu.left}
+          top={menu.top}
+          width={168}
+          items={items}
+          value={mode}
+          onPick={v => setMode(v as SizeMode)}
+        />
       )}
     </div>
   );

@@ -5,7 +5,17 @@ import {
   StyleProperty, ColorFormat, displayLabel, formatColor, getAlpha, withAlpha,
 } from '../style-extractor';
 import { PropertyField, FieldSpec } from './PropertyField';
-import { CopyIcon, ResetIcon } from './Icon';
+import { fieldShell, fieldInput, fieldAffix } from './field-base';
+import { normalizeInput } from '../property-controls';
+import { ResetIcon, FieldGlyph, FieldIconName } from './Icon';
+
+/** margin / padding 四个方向：字母标签换成方向箭头 */
+const SIDE_META: Record<string, { icon: FieldIconName; title: string }> = {
+  T: { icon: 'top', title: '上' },
+  R: { icon: 'right', title: '右' },
+  B: { icon: 'bottom', title: '下' },
+  L: { icon: 'left', title: '左' },
+};
 
 interface PropertyRowProps {
   property: StyleProperty;
@@ -18,19 +28,21 @@ interface PropertyRowProps {
 }
 
 export function PropertyRow({ property, isColorGroup, colorFormat, onCommit, onReset }: PropertyRowProps) {
-  const [copied, setCopied] = useState(false);
   const [hover, setHover] = useState(false);
 
   const specs: FieldSpec[] = useMemo(() => {
     if (property.parts && property.parts.length > 0) {
-      return property.parts.map(part => ({
-        value: part.value,
-        cssProp: part.cssProp,
-        control: part.control,
-        unit: part.unit,
-        options: part.options,
-        prefix: part.label,
-      }));
+      return property.parts.map(part => {
+        const side = SIDE_META[part.label];
+        return {
+          value: part.value,
+          cssProp: part.cssProp,
+          control: part.control,
+          unit: part.unit,
+          options: part.options,
+          prefix: side ? <FieldGlyph name={side.icon} title={side.title} /> : part.label,
+        };
+      });
     }
     return [{
       value: property.value,
@@ -46,13 +58,12 @@ export function PropertyRow({ property, isColorGroup, colorFormat, onCommit, onR
   /** 多值属性：一个标签 + 2 列输入格 */
   const isMulti = specs.length > 1;
 
-  const handleCopy = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation();
-    navigator.clipboard.writeText(`${property.name}: ${property.value}`).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1200);
-    }).catch(() => {});
-  }, [property.name, property.value]);
+  // margin / padding：默认合并成「垂直」「水平」两个框，可展开成四个方向
+  const boxParts = property.parts && property.parts.length === 4
+    && (property.name === 'margin' || property.name === 'padding')
+    ? property.parts
+    : null;
+  const [expanded, setExpanded] = useState(false);
 
   const handleReset = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
@@ -62,6 +73,21 @@ export function PropertyRow({ property, isColorGroup, colorFormat, onCommit, onR
       onReset(property.cssProps[0]);
     }
   }, [onReset, property.parts, property.cssProps]);
+
+  /**
+   * 合并态提交：单个值同时写两侧；「上, 下」两个值时分别写。
+   * 单位在输入框里作为后缀展示，这里负责补回。
+   */
+  const commitPair = (first: string, second: string, raw: string): boolean => {
+    const tokens = raw.split(',').map(t => t.trim()).filter(Boolean);
+    if (tokens.length === 0 || tokens.length > 2) return false;
+    const values = tokens.map(t => (/^-?\d*\.?\d+(px|%)?$/.test(t) ? normalizeInput(t, 'px') : ''));
+    if (values.some(v => !v)) return false;
+    const [a, b] = values.length === 2 ? values : [values[0], values[0]];
+    onCommit(first, a);
+    onCommit(second, b);
+    return true;
+  };
 
   return (
     <div
@@ -80,7 +106,7 @@ export function PropertyRow({ property, isColorGroup, colorFormat, onCommit, onR
         }} />
       )}
 
-      {/* 标签行：名称 + 尺寸三态 + hover 时的复制 / 重置 */}
+      {/* 标签行：名称 + 尺寸三态 + hover 时的重置 */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 4, minHeight: 14 }}>
         <span
           title={property.modified ? `original: ${property.original ?? 'stylesheet value'}` : property.name}
@@ -93,22 +119,64 @@ export function PropertyRow({ property, isColorGroup, colorFormat, onCommit, onR
         >
           {displayLabel(property.name)}
         </span>
-        {hover && (
-          property.modified ? (
-            <IconButton title="Reset to original" onClick={handleReset}>
-              <ResetIcon size={11} />
-            </IconButton>
-          ) : (
-            <IconButton title={copied ? 'Copied' : 'Copy'} onClick={handleCopy}>
-              <CopyIcon size={11} />
-            </IconButton>
-          )
+        {boxParts && (
+          <button
+            type="button"
+            title={expanded ? '合并为上下 / 左右' : '按四个方向编辑'}
+            aria-label={expanded ? '合并为上下 / 左右' : '按四个方向编辑'}
+            onClick={() => setExpanded(v => !v)}
+            style={{
+              flexShrink: 0, width: 16, height: 16, padding: 0,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              border: 'none', borderRadius: 3, background: 'transparent', cursor: 'pointer',
+              color: expanded
+                ? 'var(--delab-accent, #32f08c)'
+                : 'var(--delab-text-tertiary, #8a8a90)',
+            }}
+          >
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+              strokeWidth={2} strokeLinejoin="round" aria-hidden>
+              <rect x="3" y="3" width="7" height="7" rx="1.5" />
+              <rect x="14" y="3" width="7" height="7" rx="1.5" />
+              <rect x="3" y="14" width="7" height="7" rx="1.5" />
+              <rect x="14" y="14" width="7" height="7" rx="1.5" />
+            </svg>
+          </button>
+        )}
+        {hover && property.modified && (
+          <IconButton title="Reset to original" onClick={handleReset}>
+            <ResetIcon size={11} />
+          </IconButton>
         )}
       </div>
 
+      {boxParts && !expanded ? (
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+          {/* 垂直：同时写 top / bottom；两侧不等时显示「上, 下」 */}
+          <PropertyField
+            spec={{
+              value: pairValue(boxParts[0].value, boxParts[2].value),
+              cssProp: `${property.name}-vertical`,
+              control: 'length', unit: 'px',
+              prefix: <FieldGlyph name="vertical" title="上下" />,
+            }}
+            onCommit={(_, value) => commitPair(boxParts[0].cssProp, boxParts[2].cssProp, value)}
+          />
+          {/* 水平：同时写 right / left；两侧不等时显示「右, 左」 */}
+          <PropertyField
+            spec={{
+              value: pairValue(boxParts[1].value, boxParts[3].value),
+              cssProp: `${property.name}-horizontal`,
+              control: 'length', unit: 'px',
+              prefix: <FieldGlyph name="horizontal" title="左右" />,
+            }}
+            onCommit={(_, value) => commitPair(boxParts[1].cssProp, boxParts[3].cssProp, value)}
+          />
+        </div>
+      ) : (
       <div style={isMulti
-        ? { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 4 }
-        : { display: 'flex', gap: 4 }}>
+        ? { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }
+        : { display: 'flex', gap: 8 }}>
         {specs.map(spec => (
           <PropertyField key={spec.cssProp} spec={spec} onCommit={onCommit} />
         ))}
@@ -120,18 +188,25 @@ export function PropertyRow({ property, isColorGroup, colorFormat, onCommit, onR
           />
         )}
       </div>
+      )}
     </div>
   );
+}
+
+/** 两个方向的值相等时只显示一个，不等时显示「第一个, 第二个」 */
+function pairValue(first: string, second: string): string {
+  return first === second ? first : `${first}, ${second}`;
 }
 
 /** 颜色透明度输入：显示/编辑百分比，写回时转成 #rrggbbaa */
 function AlphaField({ color, onCommit }: { color: string; onCommit: (value: string) => void }) {
   const pct = Math.round(getAlpha(color) * 100);
-  const [draft, setDraft] = useState(`${pct}%`);
+  const [draft, setDraft] = useState(`${pct}`);
   const [focused, setFocused] = useState(false);
+  const [hover, setHover] = useState(false);
 
   useEffect(() => {
-    if (!focused) setDraft(`${pct}%`);
+    if (!focused) setDraft(`${pct}`);
   }, [pct, focused]);
 
   const commit = () => {
@@ -143,29 +218,30 @@ function AlphaField({ color, onCommit }: { color: string; onCommit: (value: stri
   };
 
   return (
-    <input
-      value={focused ? draft : `${pct}%`}
-      onFocus={e => { setFocused(true); setDraft(`${pct}%`); e.target.select(); }}
-      onChange={e => setDraft(e.target.value)}
-      onBlur={commit}
-      onKeyDown={e => {
-        e.stopPropagation();
-        if (e.key === 'Enter') { e.preventDefault(); e.currentTarget.blur(); }
-        else if (e.key === 'Escape') { e.preventDefault(); setDraft(`${pct}%`); e.currentTarget.blur(); }
-      }}
-      spellCheck={false}
-      title="透明度"
+    <div
       style={{
-        flex: 'none', width: 46, height: 28, boxSizing: 'border-box',
-        padding: '0 6px', textAlign: 'right',
-        fontFamily: "'JetBrains Mono', 'SF Mono', Menlo, monospace",
-        fontSize: 11, lineHeight: '16px',
-        borderRadius: 6, border: '1px solid transparent', outline: 'none',
-        background: 'var(--delab-field-bg, #ffffff)',
-        color: 'var(--delab-text, #141416)',
-        cursor: 'text',
+        ...fieldShell({ focused, hover }),
+        flex: 'none', width: 54, justifyContent: 'flex-end',
       }}
-    />
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+    >
+      <input
+        value={focused ? draft : `${pct}`}
+        onFocus={e => { setFocused(true); setDraft(`${pct}`); e.target.select(); }}
+        onChange={e => setDraft(e.target.value)}
+        onBlur={commit}
+        onKeyDown={e => {
+          e.stopPropagation();
+          if (e.key === 'Enter') { e.preventDefault(); e.currentTarget.blur(); }
+          else if (e.key === 'Escape') { e.preventDefault(); setDraft(`${pct}`); e.currentTarget.blur(); }
+        }}
+        spellCheck={false}
+        title="透明度"
+        style={{ ...fieldInput, textAlign: 'right' }}
+      />
+      <span style={fieldAffix}>%</span>
+    </div>
   );
 }
 

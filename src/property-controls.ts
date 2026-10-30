@@ -24,19 +24,11 @@ const ENUM_OPTIONS: Record<string, string[]> = {
   'justify-content': ['flex-start', 'flex-end', 'center', 'space-between', 'space-around', 'space-evenly', 'start', 'end'],
   'align-items': ['stretch', 'flex-start', 'flex-end', 'center', 'baseline', 'start', 'end'],
   'align-content': ['normal', 'stretch', 'flex-start', 'flex-end', 'center', 'space-between', 'space-around'],
-  'position': ['static', 'relative', 'absolute', 'fixed', 'sticky'],
   'text-align': ['left', 'right', 'center', 'justify', 'start', 'end'],
   'font-weight': ['100', '200', '300', '400', '500', '600', '700', '800', '900', 'normal', 'bold'],
 };
 
 const META: Record<string, ControlMeta> = {
-  // Position
-  'position':         { control: 'enum',   cssProps: ['position'] },
-  'top':              { control: 'length', cssProps: ['top'] },
-  'right':            { control: 'length', cssProps: ['right'] },
-  'bottom':           { control: 'length', cssProps: ['bottom'] },
-  'left':             { control: 'length', cssProps: ['left'] },
-  'z-index':          { control: 'number', cssProps: ['z-index'] },
   // Size
   'width':            { control: 'length', cssProps: ['width'] },
   'height':           { control: 'length', cssProps: ['height'] },

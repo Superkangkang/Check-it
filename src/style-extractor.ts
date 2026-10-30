@@ -77,14 +77,14 @@ export interface BoxModel {
   content: { width: number; height: number };
 }
 
-// 按 Figma 面板分区组织属性
+// 按面板分区组织属性（位置组用 X / Y / Z / 旋转 表达）
 const GROUP_DEFS: Record<string, string[]> = {
-  'Position':   ['position', 'top', 'right', 'bottom', 'left', 'z-index'],
+  'Position':   ['position', 'left', 'top', 'z-index', 'transform'],
   'Layout':     [
     'width', 'height', 'display', 'flex-direction', 'justify-content', 'align-items',
     'gap', 'flex-wrap', 'align-content', 'flex-grow', 'flex-shrink', 'flex-basis',
+    'margin', 'padding',
   ],
-  'Spacing':    [], // merged: margin / padding
   'Typography': ['font-size', 'font-weight', 'line-height', 'letter-spacing', 'text-align'],
   'Appearance': [], // merged: opacity / border-radius
   'Fill':       [], // merged: background-color
@@ -202,13 +202,28 @@ export class StyleExtractor {
     const groups: RawGroup[] = [];
 
     for (const [name, props] of Object.entries(GROUP_DEFS)) {
-      if (name === 'Spacing') {
-        const mg = this.mergeBoxShorthand(c, 'margin');
-        const pd = this.mergeBoxShorthand(c, 'padding');
-        const merged: RawProperty[] = [];
-        if (mg) merged.push({ ...mg, parts: this.boxParts(c, 'margin') });
-        if (pd) merged.push({ ...pd, parts: this.boxParts(c, 'padding') });
-        if (merged.length) groups.push({ name, properties: merged });
+      if (name === 'Position') {
+        // 始终输出全部字段，默认值也展示（X / Y / Z 可以空着表示 auto）
+        groups.push({
+          name,
+          properties: [
+            { name: 'position', value: c.getPropertyValue('position') || 'static', isColor: false },
+            { name: 'left', value: c.getPropertyValue('left') || 'auto', isColor: false },
+            { name: 'top', value: c.getPropertyValue('top') || 'auto', isColor: false },
+            { name: 'z-index', value: c.getPropertyValue('z-index') || 'auto', isColor: false },
+            {
+              // 优先用 inline 值：computed 的 matrix 会丢掉 rotate / scale 的语义
+              name: 'transform',
+              value: (target as HTMLElement).style?.transform
+                || c.getPropertyValue('transform')
+                || 'none',
+              isColor: false,
+            },
+            // left / top 为 auto 时，给面板一个实际坐标提示（相对 offsetParent）
+            { name: 'x-hint', value: String(Math.round((target as HTMLElement).offsetLeft || 0)), isColor: false },
+            { name: 'y-hint', value: String(Math.round((target as HTMLElement).offsetTop || 0)), isColor: false },
+          ],
+        });
         continue;
       }
       if (name === 'Stroke') {
@@ -268,6 +283,12 @@ export class StyleExtractor {
 
       const properties: RawProperty[] = [];
       for (const prop of props) {
+        // margin / padding 合并成一条，下面挂四个方向的子字段
+        if (prop === 'margin' || prop === 'padding') {
+          const mergedBox = this.mergeBoxShorthand(c, prop);
+          if (mergedBox) properties.push({ ...mergedBox, parts: this.boxParts(c, prop) });
+          continue;
+        }
         const value = c.getPropertyValue(prop);
         if (!value) continue;
         // 无阴影时 computed 会返回 none，不作为一条属性展示
@@ -501,15 +522,12 @@ export class StyleExtractor {
 // ── 空值判断 ──
 export function isEmptyValue(name: string, value: string): boolean {
   const v = value.trim();
-  // position 始终保留：默认 static 时也要能切成 relative / absolute
-  if (name === 'position') return false;
   // 默认值不算有效内容，避免面板被"什么都没设置"的字段撑满
   if (name === 'opacity') return v === '1';
   if (name === 'flex-grow') return v === '0';
   if (name === 'flex-shrink') return v === '1';
   if (name === 'flex-basis') return v === 'auto';
-  // 盒模型 / 间距类：0 视为没设置；top / left 之类的 0 仍然有意义
-  // margin / padding 例外：0px 也常驻展示，方便直接改
+  // 间距 / 圆角类：0 视为没设置；margin / padding 例外，0px 也常驻展示，方便直接改
   if (/^(gap|row-gap|column-gap|border-radius|border-width|letter-spacing)/.test(name)
       && (v === '0px' || v === '0')) return true;
   if (v === 'none' || v === 'normal' || v === 'auto' ||

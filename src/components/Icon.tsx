@@ -1,5 +1,11 @@
 // DeLab Icons — React components
 
+import { createElement } from 'react';
+import {
+  UnfoldHorizontal, UnfoldVertical, RotateCw, ArrowUpDown, ArrowLeftRight,
+  ArrowUp, ArrowRight, ArrowDown, ArrowLeft,
+} from 'lucide';
+
 interface IconProps {
   size?: number;
 }
@@ -45,16 +51,6 @@ export function InspectIcon({ size = 36 }: IconProps) {
   );
 }
 
-export function CopyIcon({ size = 16 }: IconProps) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor"
-      strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
-      <rect x="9" y="9" width="12" height="12" rx="2" />
-      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-    </svg>
-  );
-}
-
 export function CommentIcon({ size = 16 }: IconProps) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -92,5 +88,44 @@ export function ResetIcon({ size = 16 }: IconProps) {
       <path d="M3 12a9 9 0 1 0 3-6.7" />
       <path d="M3 4v5h5" />
     </svg>
+  );
+}
+
+/** 字段内小图标：宽 / 高 / 旋转 / 上下 / 左右 / 四方向 */
+const FIELD_ICON_NODES = {
+  width: UnfoldHorizontal,
+  height: UnfoldVertical,
+  rotate: RotateCw,
+  vertical: ArrowUpDown,
+  horizontal: ArrowLeftRight,
+  top: ArrowUp,
+  right: ArrowRight,
+  bottom: ArrowDown,
+  left: ArrowLeft,
+};
+
+export type FieldIconName = keyof typeof FIELD_ICON_NODES;
+
+/** 把 lucide 的图标节点数组渲染成 24×24、2px 描边的小图标 */
+export function FieldIcon({ name, size = 12 }: { name: FieldIconName; size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden
+      style={{ flexShrink: 0 }}>
+      {FIELD_ICON_NODES[name].map(([tag, attrs], i) => createElement(tag, { key: i, ...attrs }))}
+    </svg>
+  );
+}
+
+/** 输入框内的图标标签：语义交给图标，title 保留可读文案 */
+export function FieldGlyph({ name, title, size = 12 }: {
+  name: FieldIconName;
+  title: string;
+  size?: number;
+}) {
+  return (
+    <span title={title} style={{ display: 'flex', alignItems: 'center' }}>
+      <FieldIcon name={name} size={size} />
+    </span>
   );
 }
