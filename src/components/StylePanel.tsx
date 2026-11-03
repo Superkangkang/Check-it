@@ -1,6 +1,5 @@
 // DeLab Style Panel - React component
 
-import { useState } from 'react';
 import { StyleGroup, StyleProperty, ColorFormat, SizeMode, isEmptyValue } from '../style-extractor';
 import { PropertyRow } from './PropertyRow';
 import { LayoutControls } from './LayoutControls';
@@ -14,7 +13,7 @@ const LAYOUT_KEYS = [
 ];
 
 /** flex 三件套是落码细节，面板默认不展示，只在「显示全部」时露出 */
-const FLEX_DETAIL_KEYS = ['flex-grow', 'flex-shrink', 'flex-basis'];
+export const FLEX_DETAIL_KEYS = ['flex-grow', 'flex-shrink', 'flex-basis'];
 
 /** display 常用值，其余（inline / inline-block / none …）暂不提供 */
 const DISPLAY_OPTIONS = ['block', 'flex', 'grid'];
@@ -22,7 +21,9 @@ const DISPLAY_OPTIONS = ['block', 'flex', 'grid'];
 interface StylePanelProps {
   groups: StyleGroup[];
   showAll: boolean;
-  initialColorFormat?: ColorFormat;
+  colorFormat: ColorFormat;
+  /** 颜色格式由外层持有，切换设计 / CSS 视图时保持一致 */
+  onColorFormatChange: (format: ColorFormat) => void;
   /** Write a declaration to the inspected element; returns false when rejected */
   onCommit: (prop: string, value: string) => boolean;
   /** Revert a single property to its pre-edit value */
@@ -30,10 +31,8 @@ interface StylePanelProps {
 }
 
 export function StylePanel({
-  groups, showAll, initialColorFormat = 'hex', onCommit, onReset,
+  groups, showAll, colorFormat, onColorFormatChange, onCommit, onReset,
 }: StylePanelProps) {
-  const [colorFormat, setColorFormat] = useState<ColorFormat>(initialColorFormat);
-
   const visibleGroups: Array<{ name: string; props: StyleProperty[] }> = [];
   for (const group of groups) {
     // 位置组始终完整展示；flex 三件套属于实现细节，默认隐藏
@@ -94,7 +93,7 @@ export function StylePanel({
                   { value: 'rgb', label: 'RGB' },
                   { value: 'hsl', label: 'HSL' },
                 ]}
-                onChange={v => setColorFormat(v as ColorFormat)}
+                onChange={v => onColorFormatChange(v as ColorFormat)}
                 title="颜色格式"
                 style={{ marginLeft: 'auto' }}
               />

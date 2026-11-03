@@ -3,13 +3,14 @@
 import * as React from 'react';
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { createRoot } from 'react-dom/client';
-import { StyleGroup, BoxModel } from '../style-extractor';
+import { StyleGroup, BoxModel, ColorFormat } from '../style-extractor';
 import type { CommentThread } from '../comment-store';
 import { ThemeProvider, SANS } from '../theme-context';
 import { Header } from './Header';
-import { ElementInfo } from './ElementInfo';
+import { ElementInfo, PanelView } from './ElementInfo';
 import { BoxModelDiagram } from './BoxModelDiagram';
 import { StylePanel } from './StylePanel';
+import { CssPanel } from './CssPanel';
 import { CommentsView } from './CommentsView';
 import { InspectIcon } from './Icon';
 
@@ -49,6 +50,15 @@ function defaultPosition(): PanelPosition {
   };
 }
 
+/** 记住上次用的样式面板视图，默认设计面板 */
+function initialPanelView(): PanelView {
+  try {
+    return localStorage.getItem('delab-panel-view') === 'css' ? 'css' : 'design';
+  } catch {
+    return 'design';
+  }
+}
+
 export function FloatingPanel({
   data, mode, view = 'style', comments = [], activeCommentId = null,
   visible, onClose, onCommit, onReset, onResetAll,
@@ -72,6 +82,8 @@ export function FloatingPanel({
 }) {
   const [pos, setPos] = useState<PanelPosition>(defaultPosition);
   const [showAll, setShowAll] = useState(false);
+  const [panelView, setPanelView] = useState<PanelView>(initialPanelView);
+  const [colorFormat, setColorFormat] = useState<ColorFormat>('hex');
 
   const dragRef = useRef({ active: false, startX: 0, startY: 0, startLeft: 0, startTop: 0 });
   const resizeRef = useRef({ active: false, startX: 0, startY: 0, startW: 0, startH: 0 });
@@ -174,10 +186,39 @@ export function FloatingPanel({
           </div>
         ) : data && (
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-            <ElementInfo tagName={data.tagName} id={data.id} classes={data.classes} visible />
+            <ElementInfo
+              tagName={data.tagName}
+              id={data.id}
+              classes={data.classes}
+              visible
+              view={panelView}
+              onViewChange={view => {
+                setPanelView(view);
+                try { localStorage.setItem('delab-panel-view', view); } catch { /* ignore */ }
+              }}
+            />
             <div style={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>
-              {data.boxModel && <BoxModelDiagram bm={data.boxModel} onCommit={onCommit} />}
-              <StylePanel groups={data.groups} showAll={showAll} onCommit={onCommit} onReset={onReset} />
+              {panelView === 'css' ? (
+                <CssPanel
+                  groups={data.groups}
+                  showAll={showAll}
+                  colorFormat={colorFormat}
+                  onCommit={onCommit}
+                  onReset={onReset}
+                />
+              ) : (
+                <>
+                  {data.boxModel && <BoxModelDiagram bm={data.boxModel} onCommit={onCommit} />}
+                  <StylePanel
+                    groups={data.groups}
+                    showAll={showAll}
+                    colorFormat={colorFormat}
+                    onColorFormatChange={setColorFormat}
+                    onCommit={onCommit}
+                    onReset={onReset}
+                  />
+                </>
+              )}
             </div>
             <ToggleBar showAll={showAll} onChange={setShowAll} />
           </div>
