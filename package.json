@@ -1,7 +1,7 @@
 {
   "name": "delab",
   "version": "0.5.0",
-  "description": "DeLab - 设计师的设计走查验收工具",
+  "description": "Inspect Lab - 设计师的设计走查验收工具",
   "scripts": {
     "build": "webpack --mode=production",
     "dev": "webpack --mode=development --watch",

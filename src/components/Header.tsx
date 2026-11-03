@@ -26,6 +26,16 @@ const iconBtn: React.CSSProperties = {
   transition: 'background 0.12s ease, color 0.12s ease',
 };
 
+/** 面板 header 的品牌图：扩展环境走 runtime URL，预览页回落到相对路径 */
+function logoUrl(): string {
+  try {
+    if (typeof chrome !== 'undefined' && chrome.runtime?.getURL) {
+      return chrome.runtime.getURL('icons/logo-128.png');
+    }
+  } catch { /* ignore */ }
+  return 'icons/logo-128.png';
+}
+
 export function Header({ onClose, onDragStart, modifiedCount = 0, onResetAll }: HeaderProps) {
   const { isDark, toggle } = useTheme();
 
@@ -39,18 +49,17 @@ export function Header({ onClose, onDragStart, modifiedCount = 0, onResetAll }: 
         cursor: onDragStart ? 'grab' : 'default',
       }}
     >
-      {/* Brand：品牌绿方块 + 字标 */}
+      {/* Brand：logo + 字标 */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, pointerEvents: 'none' }}>
-        <span style={{
-          display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-          width: 20, height: 20, background: 'var(--delab-accent, #32f08c)',
-          color: 'var(--delab-accent-contrast, #0b0b0c)', borderRadius: 6,
-          fontSize: 11, fontWeight: 800, letterSpacing: '-0.02em',
-        }}>
-          C
-        </span>
+        <img
+          src={logoUrl()}
+          alt=""
+          width={20}
+          height={20}
+          style={{ display: 'block', width: 20, height: 20, borderRadius: 5 }}
+        />
         <span style={{ fontSize: 13, fontWeight: 600, letterSpacing: '-0.01em', color: 'var(--delab-text, #141416)' }}>
-          Check it
+          Inspect Lab
         </span>
       </div>
 
