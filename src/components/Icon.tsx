@@ -94,51 +94,91 @@ export function ResetIcon({ size = 16 }: IconProps) {
 interface FieldIconSpec {
   /** 裁掉原生留白后的 viewBox：[x, y, w, h]，四周留 2 单位呼吸边 */
   vb: [number, number, number, number];
-  paths: Array<{ d: string; eo?: boolean }>;
+  /** stroke 存在时按线宽渲染描边路径，否则按 fill 渲染 */
+  paths: Array<{ d: string; eo?: boolean; stroke?: number }>;
 }
 
 export type FieldIconName =
   | 'width' | 'height' | 'rotate'
   | 'vertical' | 'horizontal'
+  | 'pad-top' | 'pad-right' | 'pad-bottom' | 'pad-left'
   | 'top' | 'right' | 'bottom' | 'left';
 
+/** 方框轮廓：外沿 8–24 圆角 3，内沿 9.4–22.6（1.4 单位细框），evenodd 抠空 */
+const SIDE_FRAME = 'M11 8h10a3 3 0 0 1 3 3v10a3 3 0 0 1-3 3H11a3 3 0 0 1-3-3V11a3 3 0 0 1 3-3zm.4 1.4h9.2a2 2 0 0 1 2 2v9.2a2 2 0 0 1-2 2h-9.2a2 2 0 0 1-2-2v-9.2a2 2 0 0 1 2-2z';
+
 const FIELD_ICON_PATHS: Record<FieldIconName, FieldIconSpec> = {
-  // arrow-left-right（Figma gap 双向箭头）
+  // 双向箭头（宽）：2.4 单位粗杆 + 实心箭头，与方框图标的粗线同宽
   width: {
-    vb: [8.3, 11.1, 15.4, 9.8],
-    paths: [{
-      d: 'm12.2071 16.5 1.6465 1.6464-.7071.7072-2.8536-2.8536 2.8536-2.8536.7071.7072-1.6465 1.6464h7.5858l-1.6464-1.6464.7071-.7072 2.8535 2.8536-2.8535 2.8536-.7071-.7072 1.6464-1.6464z',
-    }],
+    vb: [7, 7, 18, 18],
+    paths: [
+      { d: 'M11.5 14.8h9v2.4h-9z' },
+      { d: 'M8.6 16l4.4-2.7v5.4z' },
+      { d: 'M23.4 16l-4.4-2.7v5.4z' },
+    ],
   },
-  // arrow-up-down
+  // 双向箭头（高）
   height: {
-    vb: [11.1, 8.3, 9.8, 15.4],
-    paths: [{
-      d: 'm16.0005 10.2923 2.8535 2.8536-.7071.7071-1.6464-1.6464v7.5857l1.6464-1.6464.7071.7071-2.8535 2.8536-2.8536-2.8536.7071-.7071 1.6465 1.6464v-7.5857l-1.6465 1.6464-.7071-.7071z',
-    }],
+    vb: [7, 7, 18, 18],
+    paths: [
+      { d: 'M14.8 11.5h2.4v9h-2.4z' },
+      { d: 'M16 8.6l2.7 4.4h-5.4z' },
+      { d: 'M16 23.4l-2.7-4.4h5.4z' },
+    ],
   },
-  // angle（Figma 旋转字段图标）
+  // 旋转：1.4 单位描边圆环箭头，整体居中于 16 光心
   rotate: {
-    vb: [10, 10, 12, 12],
-    paths: [{
-      d: 'm12 12v8h8v-1h-3c0-2.2091-1.7909-4-4-4v-3zm1 4v3h3c0-1.6569-1.3431-3-3-3z',
-      eo: true,
-    }],
+    vb: [7, 7, 18, 18],
+    paths: [
+      { d: 'M22.5 16.9a6.5 6.5 0 1 1-6.5-6.5', stroke: 1.4 },
+      { d: 'M16 8.6l3 1.8-3 1.8z' },
+    ],
   },
-  // vertical-padding
+  // 上下内边距：细方框 + 上下两条粗线
   vertical: {
     vb: [7, 7, 18, 18],
     paths: [
-      { d: 'm9 9h14v1h-14zm0 13h14v1h-14z' },
-      { d: 'm19 13h-6v6h6zm-7-1v8h8v-8z', eo: true },
+      { d: SIDE_FRAME, eo: true },
+      { d: 'M11 11.2h10v2.4h-10z' },
+      { d: 'M11 18.4h10v2.4h-10z' },
     ],
   },
-  // horizontal-padding
+  // 左右内边距：细方框 + 左右两条粗线
   horizontal: {
     vb: [7, 7, 18, 18],
     paths: [
-      { d: 'm9 9v14h1v-14zm13 0v14h1v-14z' },
-      { d: 'm13 19v-6h6v6zm-1-7h8v8h-8z', eo: true },
+      { d: SIDE_FRAME, eo: true },
+      { d: 'M11.2 11h2.4v10h-2.4z' },
+      { d: 'M18.4 11h2.4v10h-2.4z' },
+    ],
+  },
+  // 上下左右单边内边距：细方框 + 内缩的粗线，靠粗细对比区分方向
+  'pad-top': {
+    vb: [7, 7, 18, 18],
+    paths: [
+      { d: SIDE_FRAME, eo: true },
+      { d: 'M11 11.2h10v2.4h-10z' },
+    ],
+  },
+  'pad-right': {
+    vb: [7, 7, 18, 18],
+    paths: [
+      { d: SIDE_FRAME, eo: true },
+      { d: 'M18.4 11h2.4v10h-2.4z' },
+    ],
+  },
+  'pad-bottom': {
+    vb: [7, 7, 18, 18],
+    paths: [
+      { d: SIDE_FRAME, eo: true },
+      { d: 'M11 18.4h10v2.4h-10z' },
+    ],
+  },
+  'pad-left': {
+    vb: [7, 7, 18, 18],
+    paths: [
+      { d: SIDE_FRAME, eo: true },
+      { d: 'M11.2 11h2.4v10h-2.4z' },
     ],
   },
   // layout-align-top
@@ -184,6 +224,10 @@ export function FieldIcon({ name, size = 14 }: { name: FieldIconName; size?: num
       style={{ flexShrink: 0 }}>
       {FIELD_ICON_PATHS[name].paths.map((p, i) => (
         <path key={i} d={p.d}
+          fill={p.stroke ? 'none' : undefined}
+          stroke={p.stroke ? 'currentColor' : undefined}
+          strokeWidth={p.stroke}
+          strokeLinecap={p.stroke ? 'round' : undefined}
           fillRule={p.eo ? 'evenodd' : undefined}
           clipRule={p.eo ? 'evenodd' : undefined} />
       ))}

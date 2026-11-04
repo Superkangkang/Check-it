@@ -9,12 +9,12 @@ import { fieldShell, fieldInput, fieldAffix } from './field-base';
 import { normalizeInput } from '../property-controls';
 import { ResetIcon, FieldGlyph, FieldIconName } from './Icon';
 
-/** margin / padding 四个方向：字母标签换成方向箭头 */
+/** margin / padding 四个方向：字母标签换成「方框 + 单边」图标 */
 const SIDE_META: Record<string, { icon: FieldIconName; title: string }> = {
-  T: { icon: 'top', title: '上' },
-  R: { icon: 'right', title: '右' },
-  B: { icon: 'bottom', title: '下' },
-  L: { icon: 'left', title: '左' },
+  T: { icon: 'pad-top', title: '上' },
+  R: { icon: 'pad-right', title: '右' },
+  B: { icon: 'pad-bottom', title: '下' },
+  L: { icon: 'pad-left', title: '左' },
 };
 
 interface PropertyRowProps {
