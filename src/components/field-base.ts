@@ -56,8 +56,8 @@ export function splitUnit(value: string): { number: string; unit: string } {
   const m = v.match(/^(-?\d*\.?\d+)\s*([a-z%]+)?$/i);
   if (m) return { number: m[1], unit: m[2] || '' };
 
-  // 合并态的「0px, 32px」：数字留在一起，公共单位提到后缀
-  const list = v.split(',').map(s => s.trim());
+  // 合并态的多值：`0px, 32px`（逗号）或 `4px 12px 12px`（border-radius 等空格简写）
+  const list = v.includes(',') ? v.split(',').map(s => s.trim()) : v.split(/\s+/);
   if (list.length > 1) {
     const matches = list.map(s => s.match(/^(-?\d*\.?\d+)\s*([a-z%]+)?$/i));
     if (matches.every(Boolean)) {

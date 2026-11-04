@@ -262,13 +262,29 @@ class DelabApp {
     return isTextField(document.activeElement as HTMLElement | null);
   }
 
+  /** 悬停离开页面元素（进入 body / 插件 UI）时清掉悬停态，避免旧框残留 */
+  private clearHover() {
+    this.hoverFinder.hide();
+    if (this.lockedTarget) return; // 锁定后盒模型固定在选中元素上，不清
+    this.boxModelOverlay.hide();
+    if (this.hoverTimer) {
+      clearTimeout(this.hoverTimer);
+      this.hoverTimer = null;
+    }
+    this.lastHoverTarget = null;
+  }
+
   private handleMouseOver = (e: MouseEvent) => {
     const target = e.target as Element;
     if (target === document.body || target === document.documentElement) {
       if (this.mode === 'comment') this.glassLabel.hide();
+      this.clearHover();
       return;
     }
-    if (target.closest('#delab-root') || target.closest('#delab-floating-root')) return;
+    if (target.closest('#delab-root') || target.closest('#delab-floating-root')) {
+      this.clearHover();
+      return;
+    }
 
     // 已选中的元素保留自己的实线框，悬停不再覆盖它
     if (target === this.lockedTarget) this.hoverFinder.hide();

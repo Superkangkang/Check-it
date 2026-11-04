@@ -44,6 +44,8 @@ export function PropertyField({ spec, onCommit }: PropertyFieldProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   /** value at focus time, used to undo a whole edit with Esc */
   const focusValueRef = useRef(spec.value);
+  /** Escape already committed the revert; the blur it triggers must not commit again */
+  const suppressBlurRef = useRef(false);
 
   // keep the field in sync with the page while it is not being edited
   useEffect(() => {
@@ -67,6 +69,10 @@ export function PropertyField({ spec, onCommit }: PropertyFieldProps) {
 
   const handleBlur = () => {
     setFocused(false);
+    if (suppressBlurRef.current) {
+      suppressBlurRef.current = false;
+      return;
+    }
     if (!commit(draft)) {
       // discard an invalid value and fall back to the page's value
       setDraft(parts.number);
@@ -95,6 +101,9 @@ export function PropertyField({ spec, onCommit }: PropertyFieldProps) {
       if (original && original !== draft) commit(original);
       setDraft(parts.number);
       setInvalid(false);
+      // blur() fires handleBlur synchronously with a stale closure draft;
+      // suppress its commit or it would overwrite the revert above
+      suppressBlurRef.current = true;
       inputRef.current?.blur();
     } else if ((e.key === 'ArrowUp' || e.key === 'ArrowDown') &&
                (control === 'length' || control === 'number')) {

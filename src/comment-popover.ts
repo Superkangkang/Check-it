@@ -23,7 +23,6 @@ const icon = (paths: string) =>
     stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths}</svg>`;
 const ICON_COPY = icon('<rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>');
 const ICON_RESOLVE = icon('<circle cx="12" cy="12" r="9"/><path d="m8.5 12 2.5 2.5 4.5-4.5"/>');
-const ICON_REOPEN = icon('<path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/>');
 const ICON_CLOSE = icon('<path d="M18 6 6 18"/><path d="m6 6 12 12"/>');
 
 function formatTime(ts: number): string {
@@ -168,11 +167,8 @@ export class CommentPopover {
     this.title.title = '';
     this.ops.replaceChildren(
       this.iconButton(ICON_COPY, '复制给 AI', () => this.actions.onCopyAll()),
-      this.iconButton(
-        thread.resolved ? ICON_REOPEN : ICON_RESOLVE,
-        thread.resolved ? '重新打开' : '标记解决',
-        () => this.actions.onToggleResolve(thread)
-      ),
+      // 已解决评论在气泡与列表中均不可达（等同删除），这里只会是「标记解决」
+      this.iconButton(ICON_RESOLVE, '标记解决', () => this.actions.onToggleResolve(thread)),
       this.iconButton(ICON_CLOSE, '关闭', () => this.dismiss())
     );
 

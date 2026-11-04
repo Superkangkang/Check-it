@@ -280,6 +280,8 @@ export class StyleExtractor {
         }
         continue;
       }
+      // 无文本的元素不展示 Typography（含 color）：这些数值全是继承值，不代表可编辑字形
+      if (name === 'Typography' && !this.hasOwnText(target)) continue;
 
       const properties: RawProperty[] = [];
       for (const prop of props) {
@@ -374,19 +376,64 @@ export class StyleExtractor {
     return (pc.flexDirection || 'row').startsWith('row') ? 'row' : 'column';
   }
 
+  /**
+   * 尺寸模式（对应 Figma 的 Fixed / Hug / Fill）：
+   * 先看显式声明，再按父级布局语义判断（flex 主轴 grow、交叉轴 stretch、grid stretch），
+   * 最后用实际尺寸与父内容尺寸的几何关系兜底。
+   */
   private sizeModeOf(target: Element, prop: 'width' | 'height', c: CSSStyleDeclaration): SizeMode {
-    const inline = (target as HTMLElement).style?.getPropertyValue(prop).trim() ?? '';
+    const el = target as HTMLElement;
+    const inline = el.style?.getPropertyValue(prop).trim() ?? '';
     if (/^(fit-content|max-content|min-content)$/.test(inline)) return 'hug';
-    // 百分比宽度 / 高度即「填充父级」
     if (/%$/.test(inline)) return 'fill';
+    if (inline) return 'fixed';
 
-    const grow = parseFloat(c.getPropertyValue('flex-grow')) || 0;
-    const stretched = c.getPropertyValue('align-self') === 'stretch';
-    // 方向要看父级：flex-direction 只对容器有意义
-    const axis = this.parentAxisOf(target);
+    const parent = target.parentElement;
+    const pc = parent ? getComputedStyle(parent) : null;
+    const pDisplay = pc?.display ?? '';
+    const isFlex = /flex/.test(pDisplay);
+    const isGrid = /grid/.test(pDisplay);
+    const mainAxis: 'row' | 'column' = (pc?.flexDirection || 'row').startsWith('row') ? 'row' : 'column';
 
-    if (prop === 'width') return axis === 'row' && grow > 0 ? 'fill' : 'fixed';
-    return (axis === 'column' && grow > 0) || (axis === 'row' && stretched) ? 'fill' : 'fixed';
+    // flex 子项：主轴看 flex-grow，交叉轴默认 stretch
+    if (isFlex) {
+      const onMain = prop === 'width' ? mainAxis === 'row' : mainAxis === 'column';
+      if (onMain) {
+        if ((parseFloat(c.getPropertyValue('flex-grow')) || 0) > 0) return 'fill';
+      } else {
+        const align = c.getPropertyValue('align-self');
+        if (align === 'stretch' || align === 'normal' || align === 'auto') return 'fill';
+      }
+    }
+
+    // grid 子项：默认 stretch 填满轨道
+    if (isGrid) {
+      const align = prop === 'width'
+        ? c.getPropertyValue('justify-self')
+        : c.getPropertyValue('align-self');
+      if (align === 'stretch' || align === 'normal' || align === 'auto') return 'fill';
+    }
+
+    const display = c.display;
+    const positioned = c.position === 'absolute' || c.position === 'fixed';
+    const floating = c.float !== 'none';
+    const inlineLevel = /^inline/.test(display) || display === 'table-cell';
+    // 脱离文档流或行内元素：尺寸由内容决定
+    if (positioned || floating || inlineLevel) return 'hug';
+
+    // 尺寸正好等于父级内容尺寸 → 由父级决定
+    if (parent && pc) {
+      const rect = target.getBoundingClientRect();
+      const size = prop === 'width' ? rect.width : rect.height;
+      const content = prop === 'width'
+        ? parent.clientWidth - (parseFloat(pc.paddingLeft) || 0) - (parseFloat(pc.paddingRight) || 0)
+        : parent.clientHeight - (parseFloat(pc.paddingTop) || 0) - (parseFloat(pc.paddingBottom) || 0);
+      const m1 = parseFloat(c.getPropertyValue(prop === 'width' ? 'margin-left' : 'margin-top')) || 0;
+      const m2 = parseFloat(c.getPropertyValue(prop === 'width' ? 'margin-right' : 'margin-bottom')) || 0;
+      if (content > 0 && Math.abs(size + m1 + m2 - content) <= 1) return 'fill';
+    }
+
+    return 'fixed';
   }
 
   /** Four-side sub-fields for margin / padding. */
@@ -444,6 +491,25 @@ export class StyleExtractor {
   }
 
   // ── Font detection ──
+  /** 元素自身是否渲染文字：直接文本节点，或文本类表单控件 */
+  private hasOwnText(target: Element): boolean {
+    if (target instanceof HTMLTextAreaElement) return true;
+    if (target instanceof HTMLSelectElement) return true;
+    if (target instanceof HTMLInputElement) {
+      const type = (target.type || 'text').toLowerCase();
+      // 这些类型不渲染字形，字体属性没有意义
+      if (['checkbox', 'radio', 'range', 'color', 'file', 'image', 'hidden'].includes(type)) return false;
+      // 按钮类只有 value 非空时才有可见文字
+      if (['button', 'submit', 'reset'].includes(type)) return !!target.value.trim();
+      return true;
+    }
+    if (target instanceof HTMLElement && target.isContentEditable) return true;
+    for (const node of target.childNodes) {
+      if (node.nodeType === Node.TEXT_NODE && node.textContent?.trim()) return true;
+    }
+    return false;
+  }
+
   private detectRenderedFont(c: CSSStyleDeclaration): string | null {
     try {
       const ff = c.fontFamily;

@@ -2,3 +2,5 @@ node_modules/
 dist/
 .DS_Store
 *.js.map
+.screenshots/
+.trae-html-share-packages/

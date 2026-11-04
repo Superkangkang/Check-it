@@ -39,7 +39,9 @@ export function StylePanel({
     const props = showAll || group.name === 'Position'
       ? group.properties
       : group.properties.filter(p =>
-          !FLEX_DETAIL_KEYS.includes(p.name) && (p.modified || !isEmptyValue(p.name, p.value)));
+          !FLEX_DETAIL_KEYS.includes(p.name)
+          // 宽高始终展示：inline / 未设尺寸的元素 computed 为 auto，不能当空值丢掉
+          && (p.name === 'width' || p.name === 'height' || p.modified || !isEmptyValue(p.name, p.value)));
     if (props.length === 0) continue;
     visibleGroups.push({ name: group.name, props });
   }
@@ -152,7 +154,10 @@ export function StylePanel({
                 onCommit={onCommit}
               />
             )}
-            {toRows(list).map((row, rowIndex) => (
+            {(name === 'Appearance' && list.length === 2
+              ? [list] // 不透明度与圆角并排，与 Figma 外观面板一致
+              : toRows(list)
+            ).map((row, rowIndex) => (
               <div
                 key={`${row[0].name}-${rowIndex}`}
                 style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}

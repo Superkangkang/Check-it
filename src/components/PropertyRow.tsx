@@ -5,9 +5,9 @@ import {
   StyleProperty, ColorFormat, displayLabel, formatColor, getAlpha, withAlpha,
 } from '../style-extractor';
 import { PropertyField, FieldSpec } from './PropertyField';
-import { fieldShell, fieldInput, fieldAffix } from './field-base';
+import { fieldShell, fieldInput, fieldAffix, FIELD_HEIGHT } from './field-base';
 import { normalizeInput } from '../property-controls';
-import { ResetIcon, FieldGlyph, FieldIconName } from './Icon';
+import { ResetIcon, FieldGlyph, FieldIcon, FieldIconName } from './Icon';
 
 /** margin / padding 四个方向：字母标签换成「方框 + 单边」图标 */
 const SIDE_META: Record<string, { icon: FieldIconName; title: string }> = {
@@ -15,6 +15,14 @@ const SIDE_META: Record<string, { icon: FieldIconName; title: string }> = {
   R: { icon: 'pad-right', title: '右' },
   B: { icon: 'pad-bottom', title: '下' },
   L: { icon: 'pad-left', title: '左' },
+};
+
+/** border-radius 四个角：按 style-extractor 的 part.label（↖ ↗ ↘ ↙）映射角图标 */
+const CORNER_META: Record<string, { icon: FieldIconName; title: string }> = {
+  '\u2196': { icon: 'radius-tl', title: '左上' },
+  '\u2197': { icon: 'radius-tr', title: '右上' },
+  '\u2198': { icon: 'radius-br', title: '右下' },
+  '\u2199': { icon: 'radius-bl', title: '左下' },
 };
 
 interface PropertyRowProps {
@@ -34,15 +42,31 @@ export function PropertyRow({ property, isColorGroup, colorFormat, onCommit, onR
     if (property.parts && property.parts.length > 0) {
       return property.parts.map(part => {
         const side = SIDE_META[part.label];
+        const corner = CORNER_META[part.label];
         return {
           value: part.value,
           cssProp: part.cssProp,
           control: part.control,
           unit: part.unit,
           options: part.options,
-          prefix: side ? <FieldGlyph name={side.icon} title={side.title} /> : part.label,
+          prefix: side
+            ? <FieldGlyph name={side.icon} title={side.title} />
+            : corner
+              ? <FieldGlyph name={corner.icon} title={corner.title} />
+              : part.label,
         };
       });
+    }
+    // 不透明度：面板内按百分比展示与编辑，写入时换算回 0–1
+    if (property.name === 'opacity') {
+      const pct = Math.round((parseFloat(property.value) || 0) * 100);
+      return [{
+        value: `${pct}%`,
+        cssProp: 'opacity',
+        control: 'number',
+        unit: '%',
+        prefix: <FieldGlyph name="opacity" title="不透明度" />,
+      }];
     }
     return [{
       value: property.value,
@@ -51,6 +75,9 @@ export function PropertyRow({ property, isColorGroup, colorFormat, onCommit, onR
       unit: property.unit,
       options: property.options,
       readOnly: property.readOnly,
+      prefix: property.name === 'border-radius'
+        ? <FieldGlyph name="radius" title="圆角" />
+        : undefined,
       format: isColorGroup ? (v: string) => formatColor(v, colorFormat) : undefined,
     }];
   }, [property, isColorGroup, colorFormat]);
@@ -63,7 +90,39 @@ export function PropertyRow({ property, isColorGroup, colorFormat, onCommit, onR
     && (property.name === 'margin' || property.name === 'padding')
     ? property.parts
     : null;
+
+  // border-radius：默认合并成单个统一圆角，可展开成四个角
+  const radiusParts = property.name === 'border-radius' && property.parts?.length === 4
+    ? property.parts
+    : null;
   const [expanded, setExpanded] = useState(false);
+
+  /** 提交：不透明度按百分比换回 0–1，其余原样写入 */
+  const commitField = useCallback((cssProp: string, value: string): boolean => {
+    if (cssProp !== 'opacity') return onCommit(cssProp, value);
+    const n = parseFloat(value);
+    if (!Number.isFinite(n)) return false;
+    return onCommit('opacity', String(Math.min(100, Math.max(0, n)) / 100));
+  }, [onCommit]);
+
+  /** 合并态圆角：按 CSS 简写规则把 1–4 个值分派到四个角，保证高亮与重置和展开态一致 */
+  const commitRadiusAll = useCallback((raw: string): boolean => {
+    if (!radiusParts) return false;
+    const tokens = raw.split(',').map(t => t.trim()).filter(Boolean);
+    if (tokens.length === 0 || tokens.length > 4) return false;
+    const values = tokens.map(t => normalizeInput(t, 'px'));
+    if (values.some(v => !v)) return false;
+    const corners = values.length === 1 ? [values[0], values[0], values[0], values[0]]
+      : values.length === 2 ? [values[0], values[1], values[0], values[1]]
+        : values.length === 3 ? [values[0], values[1], values[2], values[1]]
+          : values;
+    // radiusParts 顺序为 左上 / 右上 / 右下 / 左下
+    let ok = true;
+    radiusParts.forEach((part, i) => {
+      if (!onCommit(part.cssProp, corners[i])) ok = false;
+    });
+    return ok;
+  }, [onCommit, radiusParts]);
 
   const handleReset = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
@@ -150,7 +209,32 @@ export function PropertyRow({ property, isColorGroup, colorFormat, onCommit, onR
         )}
       </div>
 
-      {boxParts && !expanded ? (
+      {radiusParts ? (
+        <div style={{ display: 'flex', gap: 8, alignItems: expanded ? 'center' : 'stretch' }}>
+          <div style={expanded
+            ? { flex: 1, minWidth: 0, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }
+            : { flex: 1, minWidth: 0 }}>
+            {expanded
+              ? specs.map(spec => (
+                  <PropertyField key={spec.cssProp} spec={spec} onCommit={commitField} />
+                ))
+              : (
+                <PropertyField
+                  spec={{
+                    // 合并态用整体 shorthand，四角不一致时显示多值
+                    value: property.value,
+                    cssProp: 'border-radius',
+                    control: 'length',
+                    unit: 'px',
+                    prefix: <FieldGlyph name="radius" title="圆角" />,
+                  }}
+                  onCommit={(_, value) => commitRadiusAll(value)}
+                />
+              )}
+          </div>
+          <RadiusModeButton expanded={expanded} onClick={() => setExpanded(v => !v)} />
+        </div>
+      ) : boxParts && !expanded ? (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
           {/* 垂直：同时写 top / bottom；两侧不等时显示「上, 下」 */}
           <PropertyField
@@ -178,7 +262,7 @@ export function PropertyRow({ property, isColorGroup, colorFormat, onCommit, onR
         ? { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }
         : { display: 'flex', gap: 8 }}>
         {specs.map(spec => (
-          <PropertyField key={spec.cssProp} spec={spec} onCommit={onCommit} />
+          <PropertyField key={spec.cssProp} spec={spec} onCommit={commitField} />
         ))}
         {/* 颜色行额外提供透明度百分比，对应 Figma 填充行右侧的 100% */}
         {!isMulti && property.isColor && (
@@ -190,6 +274,33 @@ export function PropertyRow({ property, isColorGroup, colorFormat, onCommit, onR
       </div>
       )}
     </div>
+  );
+}
+
+/** 圆角「统一 / 四角独立」切换：合并态高亮，展开态描边 */
+function RadiusModeButton({ expanded, onClick }: { expanded: boolean; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      title={expanded ? '合并为统一圆角' : '分别设置四角'}
+      aria-label={expanded ? '合并为统一圆角' : '分别设置四角'}
+      aria-pressed={expanded}
+      onClick={onClick}
+      style={{
+        flexShrink: 0, width: FIELD_HEIGHT, height: FIELD_HEIGHT, padding: 0,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        borderRadius: 6, cursor: 'pointer',
+        border: expanded ? '1px solid var(--delab-field-border, rgba(0,0,0,0.12))' : 'none',
+        background: expanded
+          ? 'var(--delab-field-bg, #ffffff)'
+          : 'var(--delab-accent, #32f08c)',
+        color: expanded
+          ? 'var(--delab-text-secondary, #57575e)'
+          : 'var(--delab-accent-contrast, #0b0b0c)',
+      }}
+    >
+      <FieldIcon name={expanded ? 'link' : 'radius'} size={14} />
+    </button>
   );
 }
 

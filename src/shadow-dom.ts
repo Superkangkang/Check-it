@@ -34,9 +34,14 @@ export class ShadowHost {
     `;
     this.shadowRoot.appendChild(style);
 
-    // 走查模式隐藏系统指针（改用 DOM 指针）；浏览器模式需恢复，故单独可控
+    // 走查模式隐藏系统指针（改用 DOM 指针）；浏览器模式需恢复，故单独可控。
+    // 文本输入类控件例外：保留 I-beam，保证编辑反馈
     this.cursorStyle = document.createElement('style');
-    this.cursorStyle.textContent = `:host, *, *::before, *::after { cursor: none !important; }`;
+    this.cursorStyle.textContent = `
+      :host, *, *::before, *::after { cursor: none !important; }
+      input:not([type='checkbox']):not([type='radio']):not([type='button']):not([type='color']):not([type='submit']):not([type='reset']),
+      textarea { cursor: text !important; }
+    `;
     this.cursorStyle.media = 'not all';
     this.shadowRoot.appendChild(this.cursorStyle);
   }

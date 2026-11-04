@@ -102,7 +102,10 @@ export type FieldIconName =
   | 'width' | 'height' | 'rotate'
   | 'vertical' | 'horizontal'
   | 'pad-top' | 'pad-right' | 'pad-bottom' | 'pad-left'
-  | 'top' | 'right' | 'bottom' | 'left';
+  | 'top' | 'right' | 'bottom' | 'left'
+  | 'opacity' | 'radius'
+  | 'radius-tl' | 'radius-tr' | 'radius-br' | 'radius-bl'
+  | 'link';
 
 /** 方框轮廓：外沿 8–24 圆角 3，内沿 9.4–22.6（1.4 单位细框），evenodd 抠空 */
 const SIDE_FRAME = 'M11 8h10a3 3 0 0 1 3 3v10a3 3 0 0 1-3 3H11a3 3 0 0 1-3-3V11a3 3 0 0 1 3-3zm.4 1.4h9.2a2 2 0 0 1 2 2v9.2a2 2 0 0 1-2 2h-9.2a2 2 0 0 1-2-2v-9.2a2 2 0 0 1 2-2z';
@@ -211,6 +214,50 @@ const FIELD_ICON_PATHS: Record<FieldIconName, FieldIconSpec> = {
       { d: 'm10 22.5h-1v-13h1z' },
       { d: 'm22 14.5h-10v-2h10z' },
       { d: 'm12 19.5h6v-2h-6z' },
+    ],
+  },
+  // 不透明度：方框 + 内部点阵（表示透明/棋盘格）
+  opacity: {
+    vb: [7, 7, 18, 18],
+    paths: [
+      { d: 'M11 8h10a3 3 0 0 1 3 3v10a3 3 0 0 1-3 3H11a3 3 0 0 1-3-3V11a3 3 0 0 1 3-3z', stroke: 1.6 },
+      { d: 'M12 12h2.5v2.5H12zM17.5 12H20v2.5h-2.5zM12 17.5h2.5V20H12zM17.5 17.5H20V20h-2.5z' },
+    ],
+  },
+  // 圆角（合并态）：四角括号
+  radius: {
+    vb: [7, 7, 18, 18],
+    paths: [
+      { d: 'M8 13v-3a2 2 0 0 1 2-2h3', stroke: 1.8 },
+      { d: 'M19 8h3a2 2 0 0 1 2 2v3', stroke: 1.8 },
+      { d: 'M24 19v3a2 2 0 0 1-2 2h-3', stroke: 1.8 },
+      { d: 'M13 24h-3a2 2 0 0 1-2-2v-3', stroke: 1.8 },
+    ],
+  },
+  // 单角圆角：左上 / 右上 / 右下 / 左下
+  'radius-tl': {
+    vb: [7, 7, 18, 18],
+    paths: [{ d: 'M11 21v-8a2 2 0 0 1 2-2h8', stroke: 1.8 }],
+  },
+  'radius-tr': {
+    vb: [7, 7, 18, 18],
+    paths: [{ d: 'M21 21v-8a2 2 0 0 0-2-2h-8', stroke: 1.8 }],
+  },
+  'radius-br': {
+    vb: [7, 7, 18, 18],
+    paths: [{ d: 'M21 11v8a2 2 0 0 1-2 2h-8', stroke: 1.8 }],
+  },
+  'radius-bl': {
+    vb: [7, 7, 18, 18],
+    paths: [{ d: 'M11 11v8a2 2 0 0 0 2 2h8', stroke: 1.8 }],
+  },
+  // 四角联动：竖线穿过上下两个圆点
+  link: {
+    vb: [7, 7, 18, 18],
+    paths: [
+      { d: 'M16 10v12', stroke: 1.6 },
+      { d: 'M18.4 12a2.4 2.4 0 1 1-4.8 0 2.4 2.4 0 0 1 4.8 0z', stroke: 1.6 },
+      { d: 'M18.4 20a2.4 2.4 0 1 1-4.8 0 2.4 2.4 0 0 1 4.8 0z', stroke: 1.6 },
     ],
   },
 };
