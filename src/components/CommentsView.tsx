@@ -26,7 +26,7 @@ export function CommentsView({
     <div className="delab-cm">
       <style>{`
         .delab-cm {
-          flex: 1;
+          flex: 1 1 auto;
           display: flex;
           flex-direction: column;
           min-height: 0;

@@ -1,43 +1,62 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="440" height="352" viewBox="0 0 440 352">
-  <rect width="440" height="352" fill="#ffffff"/>
-  <svg x="20" y="6" width="48" height="48" viewBox="7 7 18 18" id="width"><path d="M11.5 14.8h9v2.4h-9z" fill="#141416"/><path d="M8.6 16l4.4-2.7v5.4z" fill="#141416"/><path d="M23.4 16l-4.4-2.7v5.4z" fill="#141416"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="440" height="244" viewBox="0 0 440 244">
+  <rect width="440" height="244" fill="#ffffff"/>
+  <svg x="20" y="6" width="48" height="48" viewBox="0 0 48 48" fill="none" id="width"><path d="M13.8068 39L5.85227 9.90906H9.43182L15.5114 33.6022H15.7955L21.9886 9.90906H25.9659L32.1591 33.6022H32.4432L38.5227 9.90906H42.1023L34.1477 39H30.5114L24.0909 15.8181H23.8636L17.4432 39H13.8068Z" fill="#141416"/></svg>
   <text x="44" y="68" font-family="Inter, Arial, sans-serif" font-size="9" fill="#6b7280" text-anchor="middle">width</text>
-  <svg x="108" y="6" width="48" height="48" viewBox="7 7 18 18" id="height"><path d="M14.8 11.5h2.4v9h-2.4z" fill="#141416"/><path d="M16 8.6l2.7 4.4h-5.4z" fill="#141416"/><path d="M16 23.4l-2.7-4.4h5.4z" fill="#141416"/></svg>
+  <svg x="108" y="6" width="48" height="48" viewBox="0 0 48 48" fill="none" id="height"><path d="M12.5227 39V9.90906H16.0455V22.8636H31.5568V9.90906H35.0795V39H31.5568V25.9886H16.0455V39H12.5227Z" fill="#141416"/></svg>
   <text x="132" y="68" font-family="Inter, Arial, sans-serif" font-size="9" fill="#6b7280" text-anchor="middle">height</text>
-  <svg x="196" y="6" width="48" height="48" viewBox="7 7 18 18" id="rotate"><path d="M22.5 16.9a6.5 6.5 0 1 1-6.5-6.5" fill="none" stroke="#141416" stroke-width="1.4" stroke-linecap="round"/><path d="M16 8.6l3 1.8-3 1.8z" fill="#141416"/></svg>
+  <svg x="196" y="6" width="48" height="48" viewBox="0 0 48 48" fill="none" id="rotate"><path d="M40 26.1282C40 29.2927 39.0616 32.3861 37.3035 35.0173C35.5454 37.6485 33.0465 39.6992 30.1229 40.9102C27.1993 42.1212 23.9822 42.4381 20.8785 41.8207C17.7749 41.2034 14.9239 39.6795 12.6863 37.4419C10.4486 35.2042 8.9248 32.3533 8.30744 29.2496C7.69007 26.1459 8.00692 22.9289 9.21793 20.0052C10.4289 17.0816 12.4797 14.5828 15.1109 12.8247C17.7421 11.0666 20.8355 10.1282 24 10.1282" stroke-width="3.6" stroke-linecap="round" stroke="#141416"/>
+<path d="M22.1538 6.01577C22.1538 4.94714 23.3131 4.28131 24.2361 4.81977L31.1805 8.87064C32.0964 9.40493 32.0964 10.7283 31.1805 11.2626L24.2361 15.3135C23.3131 15.852 22.1538 15.1861 22.1538 14.1175V6.01577Z" fill="#141416"/></svg>
   <text x="220" y="68" font-family="Inter, Arial, sans-serif" font-size="9" fill="#6b7280" text-anchor="middle">rotate</text>
-  <svg x="284" y="6" width="48" height="48" viewBox="7 7 18 18" id="vertical"><path d="M11 8h10a3 3 0 0 1 3 3v10a3 3 0 0 1-3 3H11a3 3 0 0 1-3-3V11a3 3 0 0 1 3-3zm.4 1.4h9.2a2 2 0 0 1 2 2v9.2a2 2 0 0 1-2 2h-9.2a2 2 0 0 1-2-2v-9.2a2 2 0 0 1 2-2z" fill="#141416" fill-rule="evenodd" clip-rule="evenodd"/><path d="M11 11.2h10v2.4h-10z" fill="#141416"/><path d="M11 18.4h10v2.4h-10z" fill="#141416"/></svg>
+  <svg x="284" y="6" width="48" height="48" viewBox="0 0 48 48" fill="none" id="vertical"><rect x="6" y="6" width="36" height="36" rx="7.38462" stroke-width="3.6" stroke-linecap="round" stroke="#141416"/>
+<path d="M14.5385 14.7693H33.4615" stroke-width="3.6" stroke-linecap="round" stroke="#141416"/>
+<path d="M14.5385 33.2307H33.4615" stroke-width="3.6" stroke-linecap="round" stroke="#141416"/></svg>
   <text x="308" y="68" font-family="Inter, Arial, sans-serif" font-size="9" fill="#6b7280" text-anchor="middle">vertical</text>
-  <svg x="372" y="6" width="48" height="48" viewBox="7 7 18 18" id="horizontal"><path d="M11 8h10a3 3 0 0 1 3 3v10a3 3 0 0 1-3 3H11a3 3 0 0 1-3-3V11a3 3 0 0 1 3-3zm.4 1.4h9.2a2 2 0 0 1 2 2v9.2a2 2 0 0 1-2 2h-9.2a2 2 0 0 1-2-2v-9.2a2 2 0 0 1 2-2z" fill="#141416" fill-rule="evenodd" clip-rule="evenodd"/><path d="M11.2 11h2.4v10h-2.4z" fill="#141416"/><path d="M18.4 11h2.4v10h-2.4z" fill="#141416"/></svg>
+  <svg x="372" y="6" width="48" height="48" viewBox="0 0 48 48" fill="none" id="horizontal"><path d="M13.3846 42H34.6154C38.6938 42 42 38.6938 42 34.6154V13.3846C42 9.30621 38.6938 6 34.6154 6H13.3846C9.30621 6 6 9.3062 6 13.3846V34.6154C6 38.6938 9.3062 42 13.3846 42Z" stroke-width="3.6" stroke-linecap="round" stroke="#141416"/>
+<path d="M33.2308 14.5385L33.2308 33.4615" stroke-width="3.6" stroke-linecap="round" stroke="#141416"/>
+<path d="M14.7692 14.5385L14.7692 33.4615" stroke-width="3.6" stroke-linecap="round" stroke="#141416"/></svg>
   <text x="396" y="68" font-family="Inter, Arial, sans-serif" font-size="9" fill="#6b7280" text-anchor="middle">horizontal</text>
-  <svg x="20" y="94" width="48" height="48" viewBox="7 7 18 18" id="pad-top"><path d="M11 8h10a3 3 0 0 1 3 3v10a3 3 0 0 1-3 3H11a3 3 0 0 1-3-3V11a3 3 0 0 1 3-3zm.4 1.4h9.2a2 2 0 0 1 2 2v9.2a2 2 0 0 1-2 2h-9.2a2 2 0 0 1-2-2v-9.2a2 2 0 0 1 2-2z" fill="#141416" fill-rule="evenodd" clip-rule="evenodd"/><path d="M11 11.2h10v2.4h-10z" fill="#141416"/></svg>
+  <svg x="20" y="94" width="48" height="48" viewBox="0 0 48 48" fill="none" id="pad-top"><rect x="6" y="6" width="36" height="36" rx="7.38462" stroke-width="3.6" stroke-linecap="round" stroke="#141416"/>
+<path d="M14.5385 14.7693H33.4615" stroke-width="3.6" stroke-linecap="round" stroke="#141416"/></svg>
   <text x="44" y="156" font-family="Inter, Arial, sans-serif" font-size="9" fill="#6b7280" text-anchor="middle">pad-top</text>
-  <svg x="108" y="94" width="48" height="48" viewBox="7 7 18 18" id="pad-right"><path d="M11 8h10a3 3 0 0 1 3 3v10a3 3 0 0 1-3 3H11a3 3 0 0 1-3-3V11a3 3 0 0 1 3-3zm.4 1.4h9.2a2 2 0 0 1 2 2v9.2a2 2 0 0 1-2 2h-9.2a2 2 0 0 1-2-2v-9.2a2 2 0 0 1 2-2z" fill="#141416" fill-rule="evenodd" clip-rule="evenodd"/><path d="M18.4 11h2.4v10h-2.4z" fill="#141416"/></svg>
+  <svg x="108" y="94" width="48" height="48" viewBox="0 0 48 48" fill="none" id="pad-right"><rect x="6" y="6" width="36" height="36" rx="7.38462" stroke-width="3.6" stroke-linecap="round" stroke="#141416"/>
+<path d="M33.2308 14.5385L33.2308 33.4615" stroke-width="3.6" stroke-linecap="round" stroke="#141416"/></svg>
   <text x="132" y="156" font-family="Inter, Arial, sans-serif" font-size="9" fill="#6b7280" text-anchor="middle">pad-right</text>
-  <svg x="196" y="94" width="48" height="48" viewBox="7 7 18 18" id="pad-bottom"><path d="M11 8h10a3 3 0 0 1 3 3v10a3 3 0 0 1-3 3H11a3 3 0 0 1-3-3V11a3 3 0 0 1 3-3zm.4 1.4h9.2a2 2 0 0 1 2 2v9.2a2 2 0 0 1-2 2h-9.2a2 2 0 0 1-2-2v-9.2a2 2 0 0 1 2-2z" fill="#141416" fill-rule="evenodd" clip-rule="evenodd"/><path d="M11 18.4h10v2.4h-10z" fill="#141416"/></svg>
+  <svg x="196" y="94" width="48" height="48" viewBox="0 0 48 48" fill="none" id="pad-bottom"><rect x="6" y="6" width="36" height="36" rx="7.38462" stroke-width="3.6" stroke-linecap="round" stroke="#141416"/>
+<path d="M14.5385 33.2307H33.4615" stroke-width="3.6" stroke-linecap="round" stroke="#141416"/></svg>
   <text x="220" y="156" font-family="Inter, Arial, sans-serif" font-size="9" fill="#6b7280" text-anchor="middle">pad-bottom</text>
-  <svg x="284" y="94" width="48" height="48" viewBox="7 7 18 18" id="pad-left"><path d="M11 8h10a3 3 0 0 1 3 3v10a3 3 0 0 1-3 3H11a3 3 0 0 1-3-3V11a3 3 0 0 1 3-3zm.4 1.4h9.2a2 2 0 0 1 2 2v9.2a2 2 0 0 1-2 2h-9.2a2 2 0 0 1-2-2v-9.2a2 2 0 0 1 2-2z" fill="#141416" fill-rule="evenodd" clip-rule="evenodd"/><path d="M11.2 11h2.4v10h-2.4z" fill="#141416"/></svg>
+  <svg x="284" y="94" width="48" height="48" viewBox="0 0 48 48" fill="none" id="pad-left"><rect x="6" y="6" width="36" height="36" rx="7.38462" stroke-width="3.6" stroke-linecap="round" stroke="#141416"/>
+<path d="M14.7692 14.5385L14.7692 33.4615" stroke-width="3.6" stroke-linecap="round" stroke="#141416"/></svg>
   <text x="308" y="156" font-family="Inter, Arial, sans-serif" font-size="9" fill="#6b7280" text-anchor="middle">pad-left</text>
-  <svg x="372" y="94" width="48" height="48" viewBox="7.5 7 17 17" id="top"><path d="m14.5 22v-10h-2v10z" fill="#141416"/><path d="m22.5 10v-1h-13v1z" fill="#141416"/><path d="m19.5 12v6h-2v-6z" fill="#141416"/></svg>
-  <text x="396" y="156" font-family="Inter, Arial, sans-serif" font-size="9" fill="#6b7280" text-anchor="middle">top</text>
-  <svg x="20" y="182" width="48" height="48" viewBox="8 7.5 17 17" id="right"><path d="m22 22.5h1v-13h-1z" fill="#141416"/><path d="m10 14.5h10v-2h-10z" fill="#141416"/><path d="m20 19.5h-6v-2h6z" fill="#141416"/></svg>
-  <text x="44" y="244" font-family="Inter, Arial, sans-serif" font-size="9" fill="#6b7280" text-anchor="middle">right</text>
-  <svg x="108" y="182" width="48" height="48" viewBox="7.5 8 17 17" id="bottom"><path d="m14.5 10v10h-2v-10zm8 12v1h-13v-1zm-3-2v-6h-2v6z" fill="#141416" fill-rule="evenodd" clip-rule="evenodd"/></svg>
-  <text x="132" y="244" font-family="Inter, Arial, sans-serif" font-size="9" fill="#6b7280" text-anchor="middle">bottom</text>
-  <svg x="196" y="182" width="48" height="48" viewBox="7 7.5 17 17" id="left"><path d="m10 22.5h-1v-13h1z" fill="#141416"/><path d="m22 14.5h-10v-2h10z" fill="#141416"/><path d="m12 19.5h6v-2h-6z" fill="#141416"/></svg>
-  <text x="220" y="244" font-family="Inter, Arial, sans-serif" font-size="9" fill="#6b7280" text-anchor="middle">left</text>
-  <svg x="284" y="182" width="48" height="48" viewBox="7 7 18 18" id="opacity"><path d="M11 8h10a3 3 0 0 1 3 3v10a3 3 0 0 1-3 3H11a3 3 0 0 1-3-3V11a3 3 0 0 1 3-3z" fill="none" stroke="#141416" stroke-width="1.6" stroke-linecap="round"/><path d="M12 12h2.5v2.5H12zM17.5 12H20v2.5h-2.5zM12 17.5h2.5V20H12zM17.5 17.5H20V20h-2.5z" fill="#141416"/></svg>
-  <text x="308" y="244" font-family="Inter, Arial, sans-serif" font-size="9" fill="#6b7280" text-anchor="middle">opacity</text>
-  <svg x="372" y="182" width="48" height="48" viewBox="7 7 18 18" id="radius"><path d="M8 13v-3a2 2 0 0 1 2-2h3" fill="none" stroke="#141416" stroke-width="1.8" stroke-linecap="round"/><path d="M19 8h3a2 2 0 0 1 2 2v3" fill="none" stroke="#141416" stroke-width="1.8" stroke-linecap="round"/><path d="M24 19v3a2 2 0 0 1-2 2h-3" fill="none" stroke="#141416" stroke-width="1.8" stroke-linecap="round"/><path d="M13 24h-3a2 2 0 0 1-2-2v-3" fill="none" stroke="#141416" stroke-width="1.8" stroke-linecap="round"/></svg>
-  <text x="396" y="244" font-family="Inter, Arial, sans-serif" font-size="9" fill="#6b7280" text-anchor="middle">radius</text>
-  <svg x="20" y="270" width="48" height="48" viewBox="7 7 18 18" id="radius-tl"><path d="M11 21v-8a2 2 0 0 1 2-2h8" fill="none" stroke="#141416" stroke-width="1.8" stroke-linecap="round"/></svg>
-  <text x="44" y="332" font-family="Inter, Arial, sans-serif" font-size="9" fill="#6b7280" text-anchor="middle">radius-tl</text>
-  <svg x="108" y="270" width="48" height="48" viewBox="7 7 18 18" id="radius-tr"><path d="M21 21v-8a2 2 0 0 0-2-2h-8" fill="none" stroke="#141416" stroke-width="1.8" stroke-linecap="round"/></svg>
-  <text x="132" y="332" font-family="Inter, Arial, sans-serif" font-size="9" fill="#6b7280" text-anchor="middle">radius-tr</text>
-  <svg x="196" y="270" width="48" height="48" viewBox="7 7 18 18" id="radius-br"><path d="M21 11v8a2 2 0 0 1-2 2h-8" fill="none" stroke="#141416" stroke-width="1.8" stroke-linecap="round"/></svg>
-  <text x="220" y="332" font-family="Inter, Arial, sans-serif" font-size="9" fill="#6b7280" text-anchor="middle">radius-br</text>
-  <svg x="284" y="270" width="48" height="48" viewBox="7 7 18 18" id="radius-bl"><path d="M11 11v8a2 2 0 0 0 2 2h8" fill="none" stroke="#141416" stroke-width="1.8" stroke-linecap="round"/></svg>
-  <text x="308" y="332" font-family="Inter, Arial, sans-serif" font-size="9" fill="#6b7280" text-anchor="middle">radius-bl</text>
-  <svg x="372" y="270" width="48" height="48" viewBox="7 7 18 18" id="link"><path d="M16 10v12" fill="none" stroke="#141416" stroke-width="1.6" stroke-linecap="round"/><path d="M18.4 12a2.4 2.4 0 1 1-4.8 0 2.4 2.4 0 0 1 4.8 0z" fill="none" stroke="#141416" stroke-width="1.6" stroke-linecap="round"/><path d="M18.4 20a2.4 2.4 0 1 1-4.8 0 2.4 2.4 0 0 1 4.8 0z" fill="none" stroke="#141416" stroke-width="1.6" stroke-linecap="round"/></svg>
-  <text x="396" y="332" font-family="Inter, Arial, sans-serif" font-size="9" fill="#6b7280" text-anchor="middle">link</text>
+  <svg x="372" y="94" width="48" height="48" viewBox="0 0 48 48" fill="none" id="opacity"><rect x="6" y="6" width="36" height="36" rx="7.38462" stroke-width="3.6" stroke-linecap="round" stroke="#141416"/>
+<g opacity="0.75">
+<path d="M34.1542 13.8462H34.1543" stroke-width="3.69231" stroke-linecap="round" stroke="#141416"/>
+<path d="M29.0772 18.9231H29.0773" stroke-width="3.69231" stroke-linecap="round" stroke="#141416"/>
+<path d="M34.1542 18.9231H34.1543" stroke-width="3.69231" stroke-linecap="round" stroke="#141416"/>
+<path d="M24.0002 24H24.0003" stroke-width="3.69231" stroke-linecap="round" stroke="#141416"/>
+<path d="M29.0772 24H29.0773" stroke-width="3.69231" stroke-linecap="round" stroke="#141416"/>
+<path d="M34.1542 24H34.1543" stroke-width="3.69231" stroke-linecap="round" stroke="#141416"/>
+<path d="M18.9232 29.0769H18.9233" stroke-width="3.69231" stroke-linecap="round" stroke="#141416"/>
+<path d="M24.0002 29.0769H24.0003" stroke-width="3.69231" stroke-linecap="round" stroke="#141416"/>
+<path d="M29.0772 29.0769H29.0773" stroke-width="3.69231" stroke-linecap="round" stroke="#141416"/>
+<path d="M34.1542 29.0769H34.1543" stroke-width="3.69231" stroke-linecap="round" stroke="#141416"/>
+<path d="M13.8462 34.1538H13.8463" stroke-width="3.69231" stroke-linecap="round" stroke="#141416"/>
+<path d="M18.9232 34.1538H18.9233" stroke-width="3.69231" stroke-linecap="round" stroke="#141416"/>
+<path d="M24.0002 34.1538H24.0003" stroke-width="3.69231" stroke-linecap="round" stroke="#141416"/>
+<path d="M29.0772 34.1538H29.0773" stroke-width="3.69231" stroke-linecap="round" stroke="#141416"/>
+<path d="M34.1542 34.1538H34.1543" stroke-width="3.69231" stroke-linecap="round" stroke="#141416"/>
+</g></svg>
+  <text x="396" y="156" font-family="Inter, Arial, sans-serif" font-size="9" fill="#6b7280" text-anchor="middle">opacity</text>
+  <svg x="20" y="182" width="48" height="48" viewBox="0 0 48 48" fill="none" id="radius"><path d="M6 17.25V10.5C6 9.30652 6.47411 8.16193 7.31802 7.31802C8.16193 6.47411 9.30652 6 10.5 6H17.25" stroke-width="3.6" stroke-linecap="round" stroke="#141416"/>
+<path d="M30.75 6H37.5C38.6935 6 39.8381 6.47411 40.682 7.31802C41.5259 8.16193 42 9.30652 42 10.5V17.25" stroke-width="3.6" stroke-linecap="round" stroke="#141416"/>
+<path d="M42 30.75V37.5C42 38.6935 41.5259 39.8381 40.682 40.682C39.8381 41.5259 38.6935 42 37.5 42H30.75" stroke-width="3.6" stroke-linecap="round" stroke="#141416"/>
+<path d="M17.25 42H10.5C9.30652 42 8.16193 41.5259 7.31802 40.682C6.47411 39.8381 6 38.6935 6 37.5V30.75" stroke-width="3.6" stroke-linecap="round" stroke="#141416"/></svg>
+  <text x="44" y="244" font-family="Inter, Arial, sans-serif" font-size="9" fill="#6b7280" text-anchor="middle">radius</text>
+  <svg x="108" y="182" width="48" height="48" viewBox="0 0 48 48" fill="none" id="radius-tl"><path d="M11 37V21.4C11 18.6417 12.0957 15.9965 14.0461 14.0461C15.9965 12.0957 18.6417 11 21.4 11H37" stroke-width="3.6" stroke-linecap="round" stroke="#141416"/></svg>
+  <text x="132" y="244" font-family="Inter, Arial, sans-serif" font-size="9" fill="#6b7280" text-anchor="middle">radius-tl</text>
+  <svg x="196" y="182" width="48" height="48" viewBox="0 0 48 48" fill="none" id="radius-tr"><path d="M37 37V21.4C37 18.6417 35.9043 15.9965 33.9539 14.0461C32.0035 12.0957 29.3583 11 26.6 11H11" stroke-width="3.6" stroke-linecap="round" stroke="#141416"/></svg>
+  <text x="220" y="244" font-family="Inter, Arial, sans-serif" font-size="9" fill="#6b7280" text-anchor="middle">radius-tr</text>
+  <svg x="284" y="182" width="48" height="48" viewBox="0 0 48 48" fill="none" id="radius-br"><path d="M37 11V26.6C37 29.3583 35.9043 32.0035 33.9539 33.9539C32.0035 35.9043 29.3583 37 26.6 37H11" stroke-width="3.6" stroke-linecap="round" stroke="#141416"/></svg>
+  <text x="308" y="244" font-family="Inter, Arial, sans-serif" font-size="9" fill="#6b7280" text-anchor="middle">radius-br</text>
+  <svg x="372" y="182" width="48" height="48" viewBox="0 0 48 48" fill="none" id="radius-bl"><path d="M11 11V26.6C11 29.3583 12.0957 32.0035 14.0461 33.9539C15.9965 35.9043 18.6417 37 21.4 37H37" stroke-width="3.6" stroke-linecap="round" stroke="#141416"/></svg>
+  <text x="396" y="244" font-family="Inter, Arial, sans-serif" font-size="9" fill="#6b7280" text-anchor="middle">radius-bl</text>
 </svg>

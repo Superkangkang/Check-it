@@ -46,6 +46,8 @@ export interface StylePart {
   control: ControlType;
   unit?: string;
   options?: string[];
+  /** 该子字段是否被改过（用于按控件粒度高亮） */
+  modified?: boolean;
 }
 
 /** Property as gathered from computed style, before control metadata is attached */
@@ -259,7 +261,8 @@ export class StyleExtractor {
         const o = c.getPropertyValue('opacity');
         if (o && o !== '1') merged.push({ name: 'opacity', value: o, isColor: false });
         const r = c.getPropertyValue('border-radius');
-        if (r && r !== '0px') {
+        // 圆角始终可编辑：0px 也生成属性，面板里保留输入框；纯文本元素没有盒子可圆角，跳过
+        if (r && !this.isTextOnly(target, c)) {
           merged.push({
             name: 'border-radius', value: r, isColor: false,
             parts: [
@@ -348,9 +351,14 @@ export class StyleExtractor {
   private describe(p: RawProperty, session?: EditSession | null): StyleProperty {
     const meta = controlMeta(p.name, p.value);
     const primary = meta.cssProps[0];
+    // 多值属性按子字段粒度标记，面板才能只高亮被改的那个控件
+    const parts = p.parts?.map(part => ({
+      ...part,
+      modified: session ? session.isModified(part.cssProp) : false,
+    }));
     const modified = session
-      ? (p.parts && p.parts.length
-          ? p.parts.some(part => session.isModified(part.cssProp))
+      ? (parts && parts.length
+          ? parts.some(part => part.modified)
           : session.isModified(primary))
       : false;
 
@@ -359,7 +367,7 @@ export class StyleExtractor {
       value: p.value,
       isColor: p.isColor,
       ...meta,
-      parts: p.parts,
+      parts,
       sizeMode: p.sizeMode,
       parentAxis: p.parentAxis,
       modified,
@@ -491,6 +499,17 @@ export class StyleExtractor {
   }
 
   // ── Font detection ──
+  /** 纯文本元素：自身有文字，且没有背景 / 边框，圆角无意义 */
+  private isTextOnly(target: Element, c: CSSStyleDeclaration): boolean {
+    if (!this.hasOwnText(target)) return false;
+    const bg = c.getPropertyValue('background-color').trim();
+    const hasBackground = (!!bg && bg !== 'rgba(0, 0, 0, 0)' && bg !== 'transparent')
+      || c.getPropertyValue('background-image') !== 'none';
+    const hasBorder = c.getPropertyValue('border-top-style') !== 'none'
+      && c.getPropertyValue('border-top-width') !== '0px';
+    return !hasBackground && !hasBorder;
+  }
+
   /** 元素自身是否渲染文字：直接文本节点，或文本类表单控件 */
   private hasOwnText(target: Element): boolean {
     if (target instanceof HTMLTextAreaElement) return true;
@@ -585,6 +604,28 @@ export class StyleExtractor {
   }
 }
 
+// ── 修改数量 ──
+/**
+ * 按面板上展示的独立控件统计修改数量：
+ * margin / padding 的「上下」「左右」各算一个，圆角合并态算一个，其余属性各算一个。
+ */
+export function countModifiedControls(groups: StyleGroup[]): number {
+  let count = 0;
+  for (const group of groups) {
+    for (const property of group.properties) {
+      const parts = property.parts;
+      if (parts && parts.length === 4 && (property.name === 'margin' || property.name === 'padding')) {
+        // 顺序固定为 上 / 右 / 下 / 左，与 PropertyRow 的合并控件一致
+        if (parts[0].modified || parts[2].modified) count++;
+        if (parts[1].modified || parts[3].modified) count++;
+        continue;
+      }
+      if (property.modified) count++;
+    }
+  }
+  return count;
+}
+
 // ── 空值判断 ──
 export function isEmptyValue(name: string, value: string): boolean {
   const v = value.trim();
@@ -593,8 +634,8 @@ export function isEmptyValue(name: string, value: string): boolean {
   if (name === 'flex-grow') return v === '0';
   if (name === 'flex-shrink') return v === '1';
   if (name === 'flex-basis') return v === 'auto';
-  // 间距 / 圆角类：0 视为没设置；margin / padding 例外，0px 也常驻展示，方便直接改
-  if (/^(gap|row-gap|column-gap|border-radius|border-width|letter-spacing)/.test(name)
+  // 间距类：0 视为没设置；margin / padding / 圆角例外，0px 也常驻展示，方便直接改
+  if (/^(gap|row-gap|column-gap|border-width|letter-spacing)/.test(name)
       && (v === '0px' || v === '0')) return true;
   if (v === 'none' || v === 'normal' || v === 'auto' ||
       v === 'start' || v === 'row' || v === 'nowrap' ||

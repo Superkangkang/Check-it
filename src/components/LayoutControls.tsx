@@ -1,10 +1,10 @@
 // DeLab Layout Controls — 对齐 Figma 自动布局的方向分段、宽高尺寸与对齐九宫格
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { SizeMode } from '../style-extractor';
-import { fieldShell, fieldInput, fieldAffix, splitUnit } from './field-base';
+import { fieldShell, fieldInput, fieldAffix, splitUnit, formatNumber } from './field-base';
 import { MenuPanel } from './Dropdown';
-import { FieldIcon } from './Icon';
+import { FieldGlyph } from './Icon';
 
 interface LayoutControlsProps {
   display: string;
@@ -25,9 +25,17 @@ interface LayoutControlsProps {
 }
 
 /** display 由分组标题右侧的选择器负责，这里只保留 flex / grid 的布局控件 */
-const DIRECTIONS: Array<{ value: string; path: string; label: string }> = [
-  { value: 'row', path: 'M5 12h14M13 6l6 6-6 6', label: '横向排列' },
-  { value: 'column', path: 'M12 5v14M6 13l6 6 6-6', label: '纵向排列' },
+const DIRECTIONS: Array<{ value: string; icon: ReactNode; label: string }> = [
+  {
+    value: 'row',
+    icon: (<><rect x="9" y="9" width="12" height="30" rx="4" /><rect x="27" y="9" width="12" height="30" rx="4" /></>),
+    label: '横向排列',
+  },
+  {
+    value: 'column',
+    icon: (<><rect x="9" y="9" width="30" height="12" rx="4" /><rect x="9" y="27" width="30" height="12" rx="4" /></>),
+    label: '纵向排列',
+  },
 ];
 
 /** 主轴分布类值：这些值下 gap 由浏览器自动撑开，输入框显示 auto */
@@ -190,9 +198,9 @@ export function LayoutControls({
                           transition: 'background 0.12s ease, color 0.12s ease',
                         }}
                       >
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                          strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                          <path d={item.path} />
+                        <svg width="12" height="12" viewBox="0 0 48 48" fill="none" stroke="currentColor"
+                          strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                          {item.icon}
                         </svg>
                       </button>
                     );
@@ -212,11 +220,10 @@ export function LayoutControls({
                       transition: 'background 0.12s ease, color 0.12s ease',
                     }}
                   >
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                      strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                      <path d="M3 5h18" />
-                      <path d="M3 12h11a3.5 3.5 0 0 1 0 7H9" />
-                      <path d="m12 16-3 3 3 3" />
+                    <svg width="12" height="12" viewBox="0 0 48 48" fill="none" stroke="currentColor"
+                      strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                      <path d="M30.6 12.5C35.7724 12.5 40 16.6686 40 21.9C40 27.1091 35.7729 31.3 30.6 31.3L8.66667 31.3" />
+                      <path d="M17 39L8.66671 31.3L17 23.5" />
                     </svg>
                   </button>
                 </div>
@@ -269,7 +276,7 @@ function GapField({ gap, auto, onCommit }: {
       >
         <div style={{ ...fieldShell({ focused, hover }), paddingRight: 2 }}>
           <input
-            value={draft ?? parts.number}
+            value={draft ?? formatNumber(parts.number)}
             placeholder="0"
             spellCheck={false}
             onChange={e => setDraft(e.target.value)}
@@ -392,7 +399,7 @@ function SizeRow({ axis, parent, value, mode, onCommit }: {
   };
 
   const items = [
-    { value: 'fixed' as SizeMode, label: `${axis === 'width' ? '固定宽度' : '固定高度'}（${number}）` },
+    { value: 'fixed' as SizeMode, label: `${axis === 'width' ? '固定宽度' : '固定高度'}（${formatNumber(number)}）` },
     { value: 'hug' as SizeMode, label: '适应内容' },
     { value: 'fill' as SizeMode, label: '填充容器' },
   ];
@@ -404,10 +411,10 @@ function SizeRow({ axis, parent, value, mode, onCommit }: {
       onMouseLeave={() => setHover(false)}
     >
       <span style={fieldAffix} title={SIZE_LABEL[axis]}>
-        <FieldIcon name={axis === 'width' ? 'width' : 'height'} />
+        <FieldGlyph name={axis === 'width' ? 'width' : 'height'} title={SIZE_LABEL[axis]} />
       </span>
       <input
-        value={draft ?? number}
+        value={draft ?? formatNumber(number)}
         spellCheck={false}
         onChange={e => setDraft(e.target.value)}
         onFocus={e => { setFocused(true); e.target.select(); }}
@@ -434,9 +441,9 @@ function SizeRow({ axis, parent, value, mode, onCommit }: {
         }}
       >
         {SIZE_MODE_TEXT[mode]}
-        <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-          strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-          <path d="m6 9 6 6 6-6" />
+        <svg width="10" height="10" viewBox="0 0 48 48" fill="none" stroke="currentColor"
+          strokeWidth={3.6} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+          <path d="M14 20L24 30L34 20" />
         </svg>
       </button>
 

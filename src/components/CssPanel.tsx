@@ -77,6 +77,7 @@ function CssRow({ property, colorFormat, onCommit, onReset }: {
         control: part.control,
         unit: part.unit,
         options: part.options,
+        modified: part.modified,
         prefix: part.label,
       }))
     : [{
@@ -86,6 +87,7 @@ function CssRow({ property, colorFormat, onCommit, onReset }: {
         unit: property.unit,
         options: property.options,
         readOnly: property.readOnly,
+        modified: property.modified,
         format: property.isColor ? (v: string) => formatColor(v, colorFormat) : undefined,
       }];
 
@@ -107,13 +109,6 @@ function CssRow({ property, colorFormat, onCommit, onReset }: {
         padding: '2px 12px', minHeight: 28, position: 'relative',
       }}
     >
-      {property.modified && (
-        <span style={{
-          position: 'absolute', left: 0, top: 6, bottom: 6, width: 2,
-          background: 'var(--delab-accent, #32f08c)', borderRadius: 1,
-        }} />
-      )}
-
       <span
         title={property.modified ? `original: ${property.original ?? 'stylesheet value'}` : property.name}
         style={{

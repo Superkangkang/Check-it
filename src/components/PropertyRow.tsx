@@ -5,9 +5,9 @@ import {
   StyleProperty, ColorFormat, displayLabel, formatColor, getAlpha, withAlpha,
 } from '../style-extractor';
 import { PropertyField, FieldSpec } from './PropertyField';
-import { fieldShell, fieldInput, fieldAffix, FIELD_HEIGHT } from './field-base';
+import { fieldShell, fieldInput, fieldAffix } from './field-base';
 import { normalizeInput } from '../property-controls';
-import { ResetIcon, FieldGlyph, FieldIcon, FieldIconName } from './Icon';
+import { ResetIcon, FieldGlyph, FieldIconName } from './Icon';
 
 /** margin / padding 四个方向：字母标签换成「方框 + 单边」图标 */
 const SIDE_META: Record<string, { icon: FieldIconName; title: string }> = {
@@ -49,6 +49,7 @@ export function PropertyRow({ property, isColorGroup, colorFormat, onCommit, onR
           control: part.control,
           unit: part.unit,
           options: part.options,
+          modified: part.modified,
           prefix: side
             ? <FieldGlyph name={side.icon} title={side.title} />
             : corner
@@ -65,6 +66,7 @@ export function PropertyRow({ property, isColorGroup, colorFormat, onCommit, onR
         cssProp: 'opacity',
         control: 'number',
         unit: '%',
+        modified: property.modified,
         prefix: <FieldGlyph name="opacity" title="不透明度" />,
       }];
     }
@@ -75,6 +77,7 @@ export function PropertyRow({ property, isColorGroup, colorFormat, onCommit, onR
       unit: property.unit,
       options: property.options,
       readOnly: property.readOnly,
+      modified: property.modified,
       prefix: property.name === 'border-radius'
         ? <FieldGlyph name="radius" title="圆角" />
         : undefined,
@@ -158,13 +161,6 @@ export function PropertyRow({ property, isColorGroup, colorFormat, onCommit, onR
         position: 'relative',
       }}
     >
-      {property.modified && (
-        <span style={{
-          position: 'absolute', left: -8, top: 1, bottom: 1, width: 2,
-          background: 'var(--delab-accent, #32f08c)', borderRadius: 1,
-        }} />
-      )}
-
       {/* 标签行：名称 + 尺寸三态 + hover 时的重置 */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 4, minHeight: 14 }}>
         <span
@@ -178,11 +174,15 @@ export function PropertyRow({ property, isColorGroup, colorFormat, onCommit, onR
         >
           {displayLabel(property.name)}
         </span>
-        {boxParts && (
+        {(boxParts || radiusParts) && (
           <button
             type="button"
-            title={expanded ? '合并为上下 / 左右' : '按四个方向编辑'}
-            aria-label={expanded ? '合并为上下 / 左右' : '按四个方向编辑'}
+            title={expanded
+              ? (radiusParts ? '合并为统一圆角' : '合并为上下 / 左右')
+              : (radiusParts ? '分别设置四角' : '按四个方向编辑')}
+            aria-label={expanded
+              ? (radiusParts ? '合并为统一圆角' : '合并为上下 / 左右')
+              : (radiusParts ? '分别设置四角' : '按四个方向编辑')}
             onClick={() => setExpanded(v => !v)}
             style={{
               flexShrink: 0, width: 16, height: 16, padding: 0,
@@ -193,12 +193,13 @@ export function PropertyRow({ property, isColorGroup, colorFormat, onCommit, onR
                 : 'var(--delab-text-tertiary, #8a8a90)',
             }}
           >
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-              strokeWidth={2} strokeLinejoin="round" aria-hidden>
-              <rect x="3" y="3" width="7" height="7" rx="1.5" />
-              <rect x="14" y="3" width="7" height="7" rx="1.5" />
-              <rect x="3" y="14" width="7" height="7" rx="1.5" />
-              <rect x="14" y="14" width="7" height="7" rx="1.5" />
+            <svg width="14" height="14" viewBox="0 0 48 48" fill="none" stroke="currentColor"
+              strokeWidth={3} strokeLinejoin="round" aria-hidden>
+              <rect x="5.5" y="6" width="36" height="36" rx="7.38462" />
+              <path d="M17.0385 12.7693H29.9615" />
+              <path d="M17.0385 35.2307H29.9615" />
+              <path d="M12.2692 17.5385L12.2692 30.4615" />
+              <path d="M34.7308 17.5385L34.7308 30.4615" />
             </svg>
           </button>
         )}
@@ -210,29 +211,27 @@ export function PropertyRow({ property, isColorGroup, colorFormat, onCommit, onR
       </div>
 
       {radiusParts ? (
-        <div style={{ display: 'flex', gap: 8, alignItems: expanded ? 'center' : 'stretch' }}>
-          <div style={expanded
-            ? { flex: 1, minWidth: 0, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }
-            : { flex: 1, minWidth: 0 }}>
-            {expanded
-              ? specs.map(spec => (
-                  <PropertyField key={spec.cssProp} spec={spec} onCommit={commitField} />
-                ))
-              : (
-                <PropertyField
-                  spec={{
-                    // 合并态用整体 shorthand，四角不一致时显示多值
-                    value: property.value,
-                    cssProp: 'border-radius',
-                    control: 'length',
-                    unit: 'px',
-                    prefix: <FieldGlyph name="radius" title="圆角" />,
-                  }}
-                  onCommit={(_, value) => commitRadiusAll(value)}
-                />
-              )}
-          </div>
-          <RadiusModeButton expanded={expanded} onClick={() => setExpanded(v => !v)} />
+        <div style={expanded
+          ? { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }
+          : { display: 'flex', gap: 8 }}>
+          {expanded
+            ? specs.map(spec => (
+                <PropertyField key={spec.cssProp} spec={spec} onCommit={commitField} />
+              ))
+            : (
+              <PropertyField
+                spec={{
+                  // 合并态用整体 shorthand，四角不一致时显示多值
+                  value: property.value,
+                  cssProp: 'border-radius',
+                  control: 'length',
+                  unit: 'px',
+                  modified: property.modified,
+                  prefix: <FieldGlyph name="radius" title="圆角" />,
+                }}
+                onCommit={(_, value) => commitRadiusAll(value)}
+              />
+            )}
         </div>
       ) : boxParts && !expanded ? (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
@@ -242,6 +241,8 @@ export function PropertyRow({ property, isColorGroup, colorFormat, onCommit, onR
               value: pairValue(boxParts[0].value, boxParts[2].value),
               cssProp: `${property.name}-vertical`,
               control: 'length', unit: 'px',
+              // 只按「上下」两个方向是否被改过来高亮
+              modified: !!(boxParts[0].modified || boxParts[2].modified),
               prefix: <FieldGlyph name="vertical" title="上下" />,
             }}
             onCommit={(_, value) => commitPair(boxParts[0].cssProp, boxParts[2].cssProp, value)}
@@ -252,6 +253,7 @@ export function PropertyRow({ property, isColorGroup, colorFormat, onCommit, onR
               value: pairValue(boxParts[1].value, boxParts[3].value),
               cssProp: `${property.name}-horizontal`,
               control: 'length', unit: 'px',
+              modified: !!(boxParts[1].modified || boxParts[3].modified),
               prefix: <FieldGlyph name="horizontal" title="左右" />,
             }}
             onCommit={(_, value) => commitPair(boxParts[1].cssProp, boxParts[3].cssProp, value)}
@@ -274,33 +276,6 @@ export function PropertyRow({ property, isColorGroup, colorFormat, onCommit, onR
       </div>
       )}
     </div>
-  );
-}
-
-/** 圆角「统一 / 四角独立」切换：合并态高亮，展开态描边 */
-function RadiusModeButton({ expanded, onClick }: { expanded: boolean; onClick: () => void }) {
-  return (
-    <button
-      type="button"
-      title={expanded ? '合并为统一圆角' : '分别设置四角'}
-      aria-label={expanded ? '合并为统一圆角' : '分别设置四角'}
-      aria-pressed={expanded}
-      onClick={onClick}
-      style={{
-        flexShrink: 0, width: FIELD_HEIGHT, height: FIELD_HEIGHT, padding: 0,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        borderRadius: 6, cursor: 'pointer',
-        border: expanded ? '1px solid var(--delab-field-border, rgba(0,0,0,0.12))' : 'none',
-        background: expanded
-          ? 'var(--delab-field-bg, #ffffff)'
-          : 'var(--delab-accent, #32f08c)',
-        color: expanded
-          ? 'var(--delab-text-secondary, #57575e)'
-          : 'var(--delab-accent-contrast, #0b0b0c)',
-      }}
-    >
-      <FieldIcon name={expanded ? 'link' : 'radius'} size={14} />
-    </button>
   );
 }
 

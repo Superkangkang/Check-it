@@ -6,7 +6,7 @@ import { createRoot } from 'react-dom/client';
 import { FloatingPanel } from './components/FloatingPanel';
 import { ThemeProvider, SANS } from './theme-context';
 import { ShadowHost } from './shadow-dom';
-import { StyleExtractor } from './style-extractor';
+import { StyleExtractor, countModifiedControls } from './style-extractor';
 import { EditSession } from './edit-session';
 import { CommentPopover } from './comment-popover';
 import { CommentButton } from './comment-button';
@@ -36,13 +36,15 @@ function sessionOf(el: Element): EditSession {
 type PanelData = React.ComponentProps<typeof FloatingPanel>['data'];
 
 function payloadFor(target: Element, session: EditSession | null): PanelData {
+  const groups = extractor.extract(target, session);
   return {
     tagName: target.tagName.toLowerCase(),
     id: target.id || '',
     classes: (target as HTMLElement).className || '',
-    groups: extractor.extract(target, session),
+    groups,
     boxModel: extractor.getBoxModel(target),
-    modifiedCount: session ? session.count() : 0,
+    // 按面板展示的独立控件计数，而不是 css 属性记录数
+    modifiedCount: countModifiedControls(groups),
   };
 }
 

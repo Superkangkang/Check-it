@@ -6,6 +6,7 @@ module.exports = {
     background: './src/background.ts',
     'content-script': './src/content-script.ts',
     preview: './src/preview.tsx',
+    workspace: './src/workspace.tsx',
   },
   output: {
     path: path.resolve(__dirname, 'dist'),
@@ -35,6 +36,7 @@ module.exports = {
         { from: 'icons', to: 'icons' },
         { from: 'fonts/variable', to: 'fonts' },
         { from: 'dev/preview.html', to: 'preview.html' },
+        { from: 'dev/workspace.html', to: 'workspace.html' },
       ],
     }),
   ],

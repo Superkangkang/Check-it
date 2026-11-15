@@ -76,10 +76,12 @@ interface DropdownProps {
   prefix?: React.ReactNode;
   title?: string;
   style?: React.CSSProperties;
+  /** 值被改过：用品牌绿高亮 */
+  highlight?: boolean;
 }
 
 export function Dropdown({
-  value, items, onChange, variant = 'field', prefix, title, style,
+  value, items, onChange, variant = 'field', prefix, title, style, highlight = false,
 }: DropdownProps) {
   const [open, setOpen] = useState(false);
   const [hover, setHover] = useState(false);
@@ -121,10 +123,10 @@ export function Dropdown({
 
   const chevron = (
     <svg
-      width="8" height="8" viewBox="0 0 8 8" aria-hidden
+      width="10" height="10" viewBox="0 0 48 48" aria-hidden
       style={{ flexShrink: 0, color: 'var(--delab-text-tertiary, #8a8a90)' }}
     >
-      <path d="M1 3l3 3 3-3" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M14 20L24 30L34 20" fill="none" stroke="currentColor" strokeWidth="3.6" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 
@@ -144,6 +146,7 @@ export function Dropdown({
             onClick={toggle}
             style={{
               ...fieldInput,
+              color: highlight ? 'var(--delab-accent, #32f08c)' : fieldInput.color,
               display: 'block', cursor: 'pointer',
               overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
             }}

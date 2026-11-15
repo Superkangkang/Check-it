@@ -1,0 +1,76 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="440" height="420" viewBox="0 0 440 420">
+  <rect width="440" height="420" fill="#ffffff"/>
+  <svg x="20" y="6" width="48" height="48" viewBox="0 0 48 48" fill="none" id="expand-grid"><rect x="5.5" y="6" width="36" height="36" rx="7.38462" stroke-width="3" stroke-linecap="round" stroke="#141416"/>
+<path d="M17.0385 12.7693H29.9615" stroke-width="3" stroke-linecap="round" stroke="#141416"/>
+<path d="M17.0385 35.2307H29.9615" stroke-width="3" stroke-linecap="round" stroke="#141416"/>
+<path d="M12.2692 17.5385L12.2692 30.4615" stroke-width="3" stroke-linecap="round" stroke="#141416"/>
+<path d="M34.7308 17.5385L34.7308 30.4615" stroke-width="3" stroke-linecap="round" stroke="#141416"/></svg>
+  <text x="44" y="68" font-family="Inter, Arial, sans-serif" font-size="9" fill="#6b7280" text-anchor="middle">expand-grid</text>
+  <svg x="108" y="6" width="48" height="48" viewBox="0 0 48 48" fill="none" id="absolute"><path d="M6 17.25V10.5C6 9.30652 6.4741 8.16193 7.31802 7.31802C8.16193 6.47411 9.30652 6 10.5 6H17.25" stroke-width="3" stroke-linecap="round" stroke="#141416"/>
+<path d="M30.75 6H37.5C38.6935 6 39.8381 6.47411 40.682 7.31802C41.5259 8.16193 42 9.30652 42 10.5V17.25" stroke-width="3" stroke-linecap="round" stroke="#141416"/>
+<path d="M42 30.75V37.5C42 38.6935 41.5259 39.8381 40.682 40.682C39.8381 41.5259 38.6935 42 37.5 42H30.75" stroke-width="3" stroke-linecap="round" stroke="#141416"/>
+<path d="M17.25 42H10.5C9.30652 42 8.16193 41.5259 7.31802 40.682C6.4741 39.8381 6 38.6935 6 37.5V30.75" stroke-width="3" stroke-linecap="round" stroke="#141416"/>
+<rect x="16" y="16" width="16" height="16" rx="3" stroke-width="3" stroke-linecap="round" stroke="#141416"/></svg>
+  <text x="132" y="68" font-family="Inter, Arial, sans-serif" font-size="9" fill="#6b7280" text-anchor="middle">absolute</text>
+  <svg x="196" y="6" width="48" height="48" viewBox="0 0 48 48" fill="none" id="direction-row"><rect x="9" y="9" width="12" height="30" rx="4" stroke-width="3" stroke-linecap="round" stroke="#141416"/>
+<rect x="27" y="9" width="12" height="30" rx="4" stroke-width="3" stroke-linecap="round" stroke="#141416"/></svg>
+  <text x="220" y="68" font-family="Inter, Arial, sans-serif" font-size="9" fill="#6b7280" text-anchor="middle">direction-row</text>
+  <svg x="284" y="6" width="48" height="48" viewBox="0 0 48 48" fill="none" id="direction-column"><rect x="9" y="9" width="30" height="12" rx="4" stroke-width="3" stroke-linecap="round" stroke="#141416"/>
+<rect x="9" y="27" width="30" height="12" rx="4" stroke-width="3" stroke-linecap="round" stroke="#141416"/></svg>
+  <text x="308" y="68" font-family="Inter, Arial, sans-serif" font-size="9" fill="#6b7280" text-anchor="middle">direction-column</text>
+  <svg x="372" y="6" width="48" height="48" viewBox="0 0 48 48" fill="none" id="wrap"><path d="M30.6 12.5C35.7724 12.5 40 16.6686 40 21.9C40 27.1091 35.7729 31.3 30.6 31.3L8.66667 31.3" stroke-width="3" stroke-linecap="round" stroke="#141416"/>
+<path d="M17 39L8.66671 31.3L17 23.5" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" stroke="#141416"/></svg>
+  <text x="396" y="68" font-family="Inter, Arial, sans-serif" font-size="9" fill="#6b7280" text-anchor="middle">wrap</text>
+  <svg x="20" y="94" width="48" height="48" viewBox="0 0 48 48" fill="none" id="flip-horizontal"><path d="M24 6V42" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round" stroke="#141416"/>
+<path d="M42 32.4127L42 15.5873C42 14.5657 40.8048 14.0113 40.0249 14.6713L30.0826 23.0839C29.5161 23.5633 29.5161 24.4367 30.0826 24.9161L40.0249 33.3287C40.8048 33.9887 42 33.4343 42 32.4127Z" stroke-width="3.6" stroke="#141416"/>
+<path d="M6 32.4127L6 15.5873C6 14.5657 7.19523 14.0113 7.97513 14.6713L17.9174 23.0839C18.4839 23.5633 18.4839 24.4367 17.9174 24.9161L7.97513 33.3287C7.19523 33.9887 6 33.4343 6 32.4127Z" stroke-width="3.6" stroke="#141416"/></svg>
+  <text x="44" y="156" font-family="Inter, Arial, sans-serif" font-size="9" fill="#6b7280" text-anchor="middle">flip-horizontal</text>
+  <svg x="108" y="94" width="48" height="48" viewBox="0 0 48 48" fill="none" id="flip-vertical"><path d="M42.5 24H6.5" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round" stroke="#141416"/>
+<path d="M16.0873 42L32.9127 42C33.9343 42 34.4887 40.8048 33.8287 40.0249L25.4161 30.0826C24.9367 29.5161 24.0633 29.5161 23.5839 30.0826L15.1713 40.0249C14.5113 40.8048 15.0657 42 16.0873 42Z" stroke-width="3.6" stroke="#141416"/>
+<path d="M16.0873 6L32.9127 6C33.9343 6 34.4887 7.19523 33.8287 7.97513L25.4161 17.9174C24.9367 18.4839 24.0633 18.4839 23.5839 17.9174L15.1713 7.97513C14.5113 7.19523 15.0657 6 16.0873 6Z" stroke-width="3.6" stroke="#141416"/></svg>
+  <text x="132" y="156" font-family="Inter, Arial, sans-serif" font-size="9" fill="#6b7280" text-anchor="middle">flip-vertical</text>
+  <svg x="196" y="94" width="48" height="48" viewBox="0 0 48 48" fill="none" id="reset"><path d="M6 24C5.99624 28.1221 7.40741 32.1206 9.99765 35.3272C12.5879 38.5338 16.2002 40.7542 20.231 41.6173C24.2617 42.4805 28.4665 41.934 32.1428 40.0693C35.819 38.2045 38.7438 35.1345 40.4283 31.3723C42.1129 27.6102 42.4551 23.3838 41.3978 19.3996C40.3406 15.4154 37.9478 11.9147 34.6196 9.4828C31.2913 7.05086 27.2292 5.83494 23.1121 6.03828C18.995 6.24162 15.0724 7.85189 12 10.6" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round" stroke="#141416"/>
+<path d="M6 8V18H16" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round" stroke="#141416"/></svg>
+  <text x="220" y="156" font-family="Inter, Arial, sans-serif" font-size="9" fill="#6b7280" text-anchor="middle">reset</text>
+  <svg x="284" y="94" width="48" height="48" viewBox="0 0 48 48" fill="none" id="sun"><path d="M32 24C32 28.4183 28.4183 32 24 32C19.5817 32 16 28.4183 16 24C16 19.5817 19.5817 16 24 16C28.4183 16 32 19.5817 32 24Z" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round" stroke="#141416"/>
+<path d="M24 4V8" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round" stroke="#141416"/>
+<path d="M24 40V44" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round" stroke="#141416"/>
+<path d="M9.86 9.85999L12.68 12.68" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round" stroke="#141416"/>
+<path d="M35.32 35.3199L38.14 38.1399" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round" stroke="#141416"/>
+<path d="M4 24H8" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round" stroke="#141416"/>
+<path d="M40 24H44" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round" stroke="#141416"/>
+<path d="M12.68 35.3199L9.86 38.1399" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round" stroke="#141416"/>
+<path d="M38.14 9.85999L35.32 12.68" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round" stroke="#141416"/></svg>
+  <text x="308" y="156" font-family="Inter, Arial, sans-serif" font-size="9" fill="#6b7280" text-anchor="middle">sun</text>
+  <svg x="372" y="94" width="48" height="48" viewBox="0 0 48 48" fill="none" id="moon"><path d="M24 6C21.6131 8.38695 20.2721 11.6243 20.2721 15C20.2721 18.3757 21.6131 21.6131 24 24C26.387 26.3869 29.6244 27.7279 33 27.7279C36.3757 27.7279 39.6131 26.3869 42 24C42 27.5601 40.9443 31.0402 38.9665 34.0003C36.9886 36.9603 34.1774 39.2675 30.8883 40.6298C27.5992 41.9922 23.98 42.3487 20.4884 41.6541C16.9967 40.9596 13.7894 39.2453 11.2721 36.7279C8.75474 34.2106 7.04041 31.0033 6.34587 27.5116C5.65134 24.02 6.0078 20.4008 7.37018 17.1117C8.73255 13.8226 11.0397 11.0114 13.9997 9.03355C16.9598 7.05568 20.4399 6 24 6Z" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round" stroke="#141416"/></svg>
+  <text x="396" y="156" font-family="Inter, Arial, sans-serif" font-size="9" fill="#6b7280" text-anchor="middle">moon</text>
+  <svg x="20" y="182" width="48" height="48" viewBox="0 0 48 48" fill="none" id="close"><path d="M38 10L10 38" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round" stroke="#141416"/>
+<path d="M10 10L38 38" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round" stroke="#141416"/></svg>
+  <text x="44" y="244" font-family="Inter, Arial, sans-serif" font-size="9" fill="#6b7280" text-anchor="middle">close</text>
+  <svg x="108" y="182" width="48" height="48" viewBox="0 0 48 48" fill="none" id="copy"><path d="M21.9381 17.9258H37.9876C40.2036 17.9258 42 19.7222 42 21.9382V37.9877C42 40.2037 40.2036 42.0001 37.9876 42.0001H21.9381C19.7221 42.0001 17.9257 40.2037 17.9257 37.9877V21.9382C17.9257 19.7222 19.7221 17.9258 21.9381 17.9258Z" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round" stroke="#141416"/>
+<path d="M12.0186 32.0805H10.0124C8.94823 32.0805 7.92767 31.6578 7.1752 30.9053C6.42273 30.1528 6 29.1323 6 28.0681V10.0124C6 8.94823 6.42273 7.92767 7.1752 7.1752C7.92767 6.42273 8.94823 6 10.0124 6H28.0681C29.1323 6 30.1528 6.42273 30.9053 7.1752C31.6578 7.92767 32.0805 8.94823 32.0805 10.0124V12.0186" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round" stroke="#141416"/></svg>
+  <text x="132" y="244" font-family="Inter, Arial, sans-serif" font-size="9" fill="#6b7280" text-anchor="middle">copy</text>
+  <svg x="196" y="182" width="48" height="48" viewBox="0 0 48 48" fill="none" id="resolve"><path d="M42 24C42 33.9411 33.9411 42 24 42C14.0589 42 6 33.9411 6 24C6 14.0589 14.0589 6 24 6C33.9411 6 42 14.0589 42 24Z" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round" stroke="#141416"/>
+<path d="M17 24L22 29L31 20" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round" stroke="#141416"/></svg>
+  <text x="220" y="244" font-family="Inter, Arial, sans-serif" font-size="9" fill="#6b7280" text-anchor="middle">resolve</text>
+  <svg x="284" y="182" width="48" height="48" viewBox="0 0 48 48" fill="none" id="resize"><path d="M8 40L40 8" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round" stroke="#141416"/>
+<path d="M22 40L40 22" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round" stroke="#141416"/>
+<path d="M36 40L40 36" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round" stroke="#141416"/></svg>
+  <text x="308" y="244" font-family="Inter, Arial, sans-serif" font-size="9" fill="#6b7280" text-anchor="middle">resize</text>
+  <svg x="372" y="182" width="48" height="48" viewBox="0 0 48 48" fill="none" id="chevron-down"><path d="M14 20L24 30L34 20" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round" stroke="#141416"/></svg>
+  <text x="396" y="244" font-family="Inter, Arial, sans-serif" font-size="9" fill="#6b7280" text-anchor="middle">chevron-down</text>
+  <svg x="20" y="270" width="48" height="48" viewBox="0 0 48 48" fill="none" id="globe"><path d="M42 24C42 33.9411 33.9411 42 24 42C14.0589 42 6 33.9411 6 24C6 14.0589 14.0589 6 24 6C33.9411 6 42 14.0589 42 24Z" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round" stroke="#141416"/>
+<path d="M6 24H42" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round" stroke="#141416"/>
+<path d="M24 6C27.8947 11.1929 30 17.5089 30 24C30 30.4911 27.8947 36.8071 24 42C20.1053 36.8071 18 30.4911 18 24C18 17.5089 20.1053 11.1929 24 6Z" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round" stroke="#141416"/></svg>
+  <text x="44" y="332" font-family="Inter, Arial, sans-serif" font-size="9" fill="#6b7280" text-anchor="middle">globe</text>
+  <svg x="108" y="270" width="48" height="48" viewBox="0 0 48 48" fill="none" id="comment"><path d="M42 30C42 31.0609 41.5786 32.0783 40.8284 32.8284C40.0783 33.5786 39.0609 34 38 34H14L6 42V10C6 8.93913 6.42143 7.92172 7.17157 7.17157C7.92172 6.42143 8.93913 6 10 6H38C39.0609 6 40.0783 6.42143 40.8284 7.17157C41.5786 7.92172 42 8.93913 42 10V30Z" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round" stroke="#141416"/></svg>
+  <text x="132" y="332" font-family="Inter, Arial, sans-serif" font-size="9" fill="#6b7280" text-anchor="middle">comment</text>
+  <svg x="196" y="270" width="48" height="48" viewBox="0 0 48 48" fill="none" id="target"><path d="M38 24C38 31.732 31.732 38 24 38C16.268 38 10 31.732 10 24C10 16.268 16.268 10 24 10C31.732 10 38 16.268 38 24Z" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round" stroke="#141416"/>
+<path d="M24 4V12M24 36V44M4 24H12M36 24H44" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round" stroke="#141416"/></svg>
+  <text x="220" y="332" font-family="Inter, Arial, sans-serif" font-size="9" fill="#6b7280" text-anchor="middle">target</text>
+  <svg x="284" y="270" width="48" height="48" viewBox="0 0 48 48" fill="none" id="inspect"><path d="M4 24C4 24 10 10 24 10C38 10 44 24 44 24C44 24 38 38 24 38C10 38 4 24 4 24Z" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round" stroke="#141416"/>
+<path d="M30 24C30 27.3137 27.3137 30 24 30C20.6863 30 18 27.3137 18 24C18 20.6863 20.6863 18 24 18C27.3137 18 30 20.6863 30 24Z" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round" stroke="#141416"/></svg>
+  <text x="308" y="332" font-family="Inter, Arial, sans-serif" font-size="9" fill="#6b7280" text-anchor="middle">inspect</text>
+  <svg x="20" y="358" width="48" height="48" viewBox="0 0 48 48" fill="none" id="cursor"><path d="M41.012 21.55C42.244 21.07 42.862 20.83 43.036 20.49C43.1095 20.3456 43.1468 20.1856 43.1447 20.0236C43.1426 19.8616 43.1012 19.7025 43.024 19.56C42.842 19.224 42.218 19 40.972 18.554L9.192 7.14604C8.172 6.78004 7.664 6.59604 7.332 6.71204C7.18856 6.76129 7.0582 6.84252 6.95078 6.94959C6.84337 7.05666 6.76171 7.18675 6.712 7.33004C6.598 7.66404 6.78 8.17204 7.146 9.19204L18.554 40.972C19.002 42.218 19.224 42.84 19.56 43.022C19.7027 43.0996 19.8621 43.1412 20.0245 43.1433C20.1869 43.1454 20.3474 43.1079 20.492 43.034C20.832 42.862 21.072 42.244 21.552 41.01L26.744 27.656C26.838 27.414 26.884 27.294 26.958 27.192C27.0225 27.1016 27.1016 27.0225 27.192 26.958C27.292 26.886 27.414 26.838 27.656 26.744L41.012 21.55Z" fill="#141416"/></svg>
+  <text x="44" y="420" font-family="Inter, Arial, sans-serif" font-size="9" fill="#6b7280" text-anchor="middle">cursor</text>
+</svg>

@@ -50,6 +50,11 @@ export const fieldAffix: React.CSSProperties = {
   color: 'var(--delab-text-tertiary, #8a8a90)',
 };
 
+/** 面板展示用：数字最多保留 2 位小数（只影响显示，写入仍按输入值） */
+export function formatNumber(value: string): string {
+  return value.replace(/-?\d+\.\d+/g, m => String(Math.round(parseFloat(m) * 100) / 100));
+}
+
 /** 拆分「数值 + 单位」：420px → { number: '420', unit: 'px' }；auto 原样返回 */
 export function splitUnit(value: string): { number: string; unit: string } {
   const v = value.trim();

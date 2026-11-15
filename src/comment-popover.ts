@@ -17,13 +17,13 @@ export interface PopoverActions {
 const WIDTH = 300;
 const GAP = 8;
 
-/** 头部图标按钮用的 24 格描边图形 */
+/** 头部图标按钮用的 48 格描边图形 */
 const icon = (paths: string) =>
-  `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-    stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths}</svg>`;
-const ICON_COPY = icon('<rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>');
-const ICON_RESOLVE = icon('<circle cx="12" cy="12" r="9"/><path d="m8.5 12 2.5 2.5 4.5-4.5"/>');
-const ICON_CLOSE = icon('<path d="M18 6 6 18"/><path d="m6 6 12 12"/>');
+  `<svg width="13" height="13" viewBox="0 0 48 48" fill="none" stroke="currentColor"
+    stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths}</svg>`;
+const ICON_COPY = icon('<path d="M21.9381 17.9258H37.9876C40.2036 17.9258 42 19.7222 42 21.9382V37.9877C42 40.2037 40.2036 42.0001 37.9876 42.0001H21.9381C19.7221 42.0001 17.9257 40.2037 17.9257 37.9877V21.9382C17.9257 19.7222 19.7221 17.9258 21.9381 17.9258Z"/><path d="M12.0186 32.0805H10.0124C8.94823 32.0805 7.92767 31.6578 7.1752 30.9053C6.42273 30.1528 6 29.1323 6 28.0681V10.0124C6 8.94823 6.42273 7.92767 7.1752 7.1752C7.92767 6.42273 8.94823 6 10.0124 6H28.0681C29.1323 6 30.1528 6.42273 30.9053 7.1752C31.6578 7.92767 32.0805 8.94823 32.0805 10.0124V12.0186"/>');
+const ICON_RESOLVE = icon('<path d="M42 24C42 33.9411 33.9411 42 24 42C14.0589 42 6 33.9411 6 24C6 14.0589 14.0589 6 24 6C33.9411 6 42 14.0589 42 24Z"/><path d="M17 24L22 29L31 20"/>');
+const ICON_CLOSE = icon('<path d="M38 10L10 38"/><path d="M10 10L38 38"/>');
 
 function formatTime(ts: number): string {
   const d = new Date(ts);

@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { normalizeInput } from '../property-controls';
 import { toHex } from '../style-extractor';
-import { fieldShell, fieldInput, fieldAffix, splitUnit } from './field-base';
+import { fieldShell, fieldInput, fieldAffix, splitUnit, formatNumber } from './field-base';
 import { Dropdown } from './Dropdown';
 
 export interface FieldSpec {
@@ -19,6 +19,8 @@ export interface FieldSpec {
   readOnly?: boolean;
   /** Display transform applied while the field is not focused (e.g. color format) */
   format?: (value: string) => string;
+  /** 该控件对应的值被改过：用品牌绿高亮 */
+  modified?: boolean;
 }
 
 interface PropertyFieldProps {
@@ -121,7 +123,9 @@ export function PropertyField({ spec, onCommit }: PropertyFieldProps) {
   const suffix = focused
     ? (NUMERIC.test(draft) ? writeUnit ?? '' : '')
     : parts.unit;
-  const shown = focused ? draft : parts.number;
+  const shown = focused ? draft : formatNumber(parts.number);
+  /** 改过的值用品牌绿高亮，替代旧的行内竖线标记 */
+  const valueColor = spec.modified ? 'var(--delab-accent, #32f08c)' : undefined;
 
   // ── enum ──
   if (control === 'enum' && spec.options && spec.options.length > 0) {
@@ -132,6 +136,7 @@ export function PropertyField({ spec, onCommit }: PropertyFieldProps) {
         onChange={value => onCommit(cssProp, value)}
         prefix={prefix}
         title={`${cssProp}: ${spec.value}`}
+        highlight={spec.modified}
       />
     );
   }
@@ -146,17 +151,24 @@ export function PropertyField({ spec, onCommit }: PropertyFieldProps) {
         onMouseEnter={() => setHover(true)}
         onMouseLeave={() => setHover(false)}
       >
-        <input
-          type="color"
-          value={swatch}
-          onChange={e => { setDraft(e.target.value); commit(e.target.value); }}
-          title="Pick a color"
-          style={{
-            flexShrink: 0, width: 14, height: 14, padding: 0,
-            border: '1px solid rgba(127,127,127,0.45)', borderRadius: 3,
-            background: 'none', cursor: 'pointer',
-          }}
-        />
+        {/* 色块只展示颜色本身，取色器透明覆盖在上层 */}
+        <span style={{
+          position: 'relative', flexShrink: 0, width: 14, height: 14, marginRight: 3,
+        }}>
+          <span style={{
+            position: 'absolute', inset: 0, borderRadius: 3, background: swatch,
+          }} />
+          <input
+            type="color"
+            value={swatch}
+            onChange={e => { setDraft(e.target.value); commit(e.target.value); }}
+            title="Pick a color"
+            style={{
+              position: 'absolute', inset: 0, width: '100%', height: '100%',
+              padding: 0, border: 'none', opacity: 0, cursor: 'pointer',
+            }}
+          />
+        </span>
         <input
           ref={inputRef}
           type="text"
@@ -166,7 +178,7 @@ export function PropertyField({ spec, onCommit }: PropertyFieldProps) {
           onBlur={handleBlur}
           onKeyDown={handleKeyDown}
           spellCheck={false}
-          style={fieldInput}
+          style={valueColor ? { ...fieldInput, color: valueColor } : fieldInput}
         />
       </div>
     );
@@ -212,7 +224,7 @@ export function PropertyField({ spec, onCommit }: PropertyFieldProps) {
         onKeyDown={handleKeyDown}
         spellCheck={false}
         title={spec.value}
-        style={fieldInput}
+        style={valueColor ? { ...fieldInput, color: valueColor } : fieldInput}
       />
       {suffix && <span style={fieldAffix}>{suffix}</span>}
     </div>

@@ -58,9 +58,9 @@ export class Lightbox {
     this.el.id = 'delab-lightbox';
     this.el.innerHTML = `
       <button type="button" title="关闭">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-          stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <path d="M6 6l12 12M18 6L6 18" />
+        <svg width="14" height="14" viewBox="0 0 48 48" fill="none" stroke="currentColor"
+          stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M38 10L10 38"/><path d="M10 10L38 38"/>
         </svg>
       </button>
     `;

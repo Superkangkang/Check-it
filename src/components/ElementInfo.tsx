@@ -27,6 +27,7 @@ export function ElementInfo({ tagName, id, classes, visible, view, onViewChange 
       style={{
         padding: '8px 12px',
         borderBottom: '1px solid var(--delab-border, rgba(0,0,0,0.08))',
+        flexShrink: 0,
         fontFamily: MONO,
         fontSize: 11,
         lineHeight: 1.6,

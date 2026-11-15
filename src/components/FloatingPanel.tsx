@@ -1,12 +1,12 @@
-// DeLab Floating Panel — React component + imperative manager
+// DeLab Floating Panel — React panel component（页面浮窗 / 侧边栏停靠共用）
 
 import * as React from 'react';
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { createRoot } from 'react-dom/client';
 import { StyleGroup, BoxModel, ColorFormat } from '../style-extractor';
 import type { CommentThread } from '../comment-store';
-import { ThemeProvider, SANS } from '../theme-context';
+import { ThemeProvider, useTheme, SANS } from '../theme-context';
 import { Header } from './Header';
+import { SunIcon, MoonIcon } from './Icon';
 import { ElementInfo, PanelView } from './ElementInfo';
 import { BoxModelDiagram } from './BoxModelDiagram';
 import { StylePanel } from './StylePanel';
@@ -16,9 +16,11 @@ import { InspectIcon } from './Icon';
 
 const DEFAULT_WIDTH = 360;
 const MIN_WIDTH = 280;
-const MIN_HEIGHT = 300;
+const EDGE_GAP = 16;
+/** 内容自适应高度，超过该值才出现滚动 */
+const MAX_HEIGHT = '70vh';
 
-interface StylePayload {
+export interface StylePayload {
   tagName: string;
   id: string;
   classes: string;
@@ -30,9 +32,9 @@ interface StylePayload {
 
 interface PanelPosition {
   left: number;
-  top: number;
+  /** 用 bottom 定位：高度随内容变化时依然贴着视口底部 */
+  bottom: number;
   width: number;
-  height: number;
 }
 
 /** 位置不持久化：每次打开都按当前视口重算，避免窗口变小后面板落在视口外 */
@@ -41,12 +43,10 @@ function defaultPosition(): PanelPosition {
     // 清掉旧版本存过的位置，避免沿用过期的越界坐标
     localStorage.removeItem('delab-panel-pos');
   } catch { /* ignore */ }
-  const h = Math.floor(window.innerHeight * 0.7);
   return {
-    left: window.innerWidth - DEFAULT_WIDTH - 16,
-    top: window.innerHeight - h - 16,
+    left: window.innerWidth - DEFAULT_WIDTH - EDGE_GAP,
+    bottom: EDGE_GAP,
     width: DEFAULT_WIDTH,
-    height: h,
   };
 }
 
@@ -63,6 +63,8 @@ export function FloatingPanel({
   data, mode, view = 'style', comments = [], activeCommentId = null,
   visible, onClose, onCommit, onReset, onResetAll,
   onLocateComment, onToggleResolveComment, onCopyAllComments, onPreviewCommentImage,
+  docked = false,
+  showThemeToggle = true,
 }: {
   data: StylePayload | null;
   mode: 'empty' | 'content';
@@ -79,25 +81,29 @@ export function FloatingPanel({
   onToggleResolveComment?: (thread: CommentThread) => void;
   onCopyAllComments?: () => void;
   onPreviewCommentImage?: (dataUrl: string) => void;
+  /** 停靠在浏览器侧边栏时铺满容器，不再浮动 / 拖拽 */
+  docked?: boolean;
+  /** 底部工具条是否显示明暗切换；工作区把它移到顶栏时为 false */
+  showThemeToggle?: boolean;
 }) {
   const [pos, setPos] = useState<PanelPosition>(defaultPosition);
   const [showAll, setShowAll] = useState(false);
   const [panelView, setPanelView] = useState<PanelView>(initialPanelView);
   const [colorFormat, setColorFormat] = useState<ColorFormat>('hex');
 
-  const dragRef = useRef({ active: false, startX: 0, startY: 0, startLeft: 0, startTop: 0 });
-  const resizeRef = useRef({ active: false, startX: 0, startY: 0, startW: 0, startH: 0 });
+  const dragRef = useRef({ active: false, startX: 0, startY: 0, startLeft: 0, startBottom: 0 });
+  const resizeRef = useRef({ active: false, startX: 0, startW: 0 });
   const resizeHandleRef = useRef<HTMLDivElement>(null);
 
   const onDragStart = useCallback((e: React.MouseEvent) => {
     if ((e.target as HTMLElement).tagName === 'BUTTON') return;
     e.preventDefault();
-    dragRef.current = { active: true, startX: e.clientX, startY: e.clientY, startLeft: pos.left, startTop: pos.top };
+    dragRef.current = { active: true, startX: e.clientX, startY: e.clientY, startLeft: pos.left, startBottom: pos.bottom };
   }, [pos]);
 
   const onResizeStart = useCallback((e: React.MouseEvent) => {
     e.preventDefault(); e.stopPropagation();
-    resizeRef.current = { active: true, startX: e.clientX, startY: e.clientY, startW: pos.width, startH: pos.height };
+    resizeRef.current = { active: true, startX: e.clientX, startW: pos.width };
   }, [pos]);
 
   useEffect(() => {
@@ -106,14 +112,14 @@ export function FloatingPanel({
         setPos(prev => ({
           ...prev,
           left: Math.max(0, Math.min(dragRef.current.startLeft + e.clientX - dragRef.current.startX, window.innerWidth - 60)),
-          top: Math.max(0, Math.min(dragRef.current.startTop + e.clientY - dragRef.current.startY, window.innerHeight - 40)),
+          // 向上拖 → bottom 变大
+          bottom: Math.max(0, Math.min(dragRef.current.startBottom - (e.clientY - dragRef.current.startY), window.innerHeight - 40)),
         }));
       }
       if (resizeRef.current.active) {
         setPos(prev => ({
           ...prev,
           width: Math.max(MIN_WIDTH, resizeRef.current.startW + e.clientX - resizeRef.current.startX),
-          height: Math.max(MIN_HEIGHT, resizeRef.current.startH + e.clientY - resizeRef.current.startY),
         }));
       }
     };
@@ -126,6 +132,19 @@ export function FloatingPanel({
     document.addEventListener('mousemove', onMove);
     document.addEventListener('mouseup', onUp);
     return () => { document.removeEventListener('mousemove', onMove); document.removeEventListener('mouseup', onUp); };
+  }, []);
+
+  // 视口被模拟成较窄尺寸时（如 375 宽），收缩面板并把它拉回可视区
+  useEffect(() => {
+    const onResize = () => {
+      setPos(prev => ({
+        ...prev,
+        width: Math.min(prev.width, Math.max(MIN_WIDTH, window.innerWidth - EDGE_GAP * 2)),
+        left: Math.max(0, Math.min(prev.left, window.innerWidth - 60)),
+      }));
+    };
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
   }, []);
 
   // 每次重新打开（visible 由 false 变 true）都回到默认位置，丢弃上次拖动的坐标
@@ -144,26 +163,36 @@ export function FloatingPanel({
         onClick={e => e.stopPropagation()}
         onMouseDown={e => e.stopPropagation()}
         style={{
-          position: 'fixed', left: pos.left, top: pos.top,
-          width: pos.width, height: pos.height,
-          zIndex: 2147483646,
+          ...(docked
+            ? { position: 'relative' as const, width: '100%', height: '100%' }
+            : {
+                position: 'fixed' as const,
+                left: pos.left,
+                bottom: pos.bottom,
+                width: pos.width,
+                height: 'auto',
+                maxHeight: MAX_HEIGHT,
+                zIndex: 2147483646,
+                borderRadius: 12,
+                boxShadow: 'var(--delab-shadow-float, 0 0 0 1px rgba(0, 0, 0, 0.05), 0 8px 20px -4px rgba(0, 0, 0, 0.16), 0 24px 56px -12px rgba(0, 0, 0, 0.26))',
+                border: '1px solid var(--delab-border-strong, rgba(0, 0, 0, 0.16))',
+              }),
           background: 'var(--delab-bg, #f5f5f6)',
           color: 'var(--delab-text, #141416)',
           fontFamily: SANS,
           fontSize: 12,
           textAlign: 'left',
-          borderRadius: 12,
-          boxShadow: 'var(--delab-shadow-float, 0 0 0 1px rgba(0, 0, 0, 0.05), 0 8px 20px -4px rgba(0, 0, 0, 0.16), 0 24px 56px -12px rgba(0, 0, 0, 0.26))',
-          border: '1px solid var(--delab-border-strong, rgba(0, 0, 0, 0.16))',
           display: 'flex', flexDirection: 'column', overflow: 'hidden',
         }}
       >
-        <Header
-          onClose={onClose}
-          onDragStart={onDragStart}
-          modifiedCount={view === 'style' ? data?.modifiedCount ?? 0 : 0}
-          onResetAll={view === 'style' ? onResetAll : undefined}
-        />
+        {!docked && (
+          <Header
+            onClose={onClose}
+            onDragStart={onDragStart}
+            modifiedCount={view === 'style' ? data?.modifiedCount ?? 0 : 0}
+            onResetAll={view === 'style' ? onResetAll : undefined}
+          />
+        )}
 
         {view === 'comments' ? (
           <CommentsView
@@ -176,8 +205,9 @@ export function FloatingPanel({
           />
         ) : mode === 'empty' ? (
           <div style={{
-            flex: 1, display: 'flex', flexDirection: 'column',
+            flex: '1 1 auto', display: 'flex', flexDirection: 'column',
             alignItems: 'center', justifyContent: 'center',
+            padding: '40px 0',
             color: 'var(--delab-text-secondary, #aaa)', fontSize: 13,
             gap: 10, userSelect: 'none',
           }}>
@@ -185,7 +215,7 @@ export function FloatingPanel({
             <span>Click an element to measure</span>
           </div>
         ) : data && (
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+          <div style={{ flex: '1 1 auto', minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
             <ElementInfo
               tagName={data.tagName}
               id={data.id}
@@ -197,50 +227,64 @@ export function FloatingPanel({
                 try { localStorage.setItem('delab-panel-view', view); } catch { /* ignore */ }
               }}
             />
-            <div style={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>
+            <div style={{ flex: '1 1 auto', overflowY: 'auto', minHeight: 0 }}>
               {panelView === 'css' ? (
-                <CssPanel
-                  groups={data.groups}
-                  showAll={showAll}
-                  colorFormat={colorFormat}
-                  onCommit={onCommit}
-                  onReset={onReset}
-                />
-              ) : (
                 <>
+                  {/* 盒子模型只在 CSS 视图展示，设计视图让位给属性面板 */}
                   {data.boxModel && <BoxModelDiagram bm={data.boxModel} onCommit={onCommit} />}
-                  <StylePanel
+                  <CssPanel
                     groups={data.groups}
                     showAll={showAll}
                     colorFormat={colorFormat}
-                    onColorFormatChange={setColorFormat}
                     onCommit={onCommit}
                     onReset={onReset}
                   />
                 </>
+              ) : (
+                <StylePanel
+                  groups={data.groups}
+                  showAll={showAll}
+                  colorFormat={colorFormat}
+                  onColorFormatChange={setColorFormat}
+                  onCommit={onCommit}
+                  onReset={onReset}
+                />
               )}
             </div>
-            <ToggleBar showAll={showAll} onChange={setShowAll} />
+            {!docked && <ToggleBar showAll={showAll} onChange={setShowAll} />}
           </div>
         )}
 
-        <div
-          ref={resizeHandleRef}
-          onMouseDown={onResizeStart}
-          onMouseEnter={() => { if (resizeHandleRef.current) resizeHandleRef.current.style.opacity = '1'; }}
-          onMouseLeave={() => { if (resizeHandleRef.current) resizeHandleRef.current.style.opacity = '0'; }}
-          style={{
-            position: 'absolute', bottom: 0, right: 0,
-            width: 20, height: 20, cursor: 'nwse-resize',
-            zIndex: 10, opacity: 0, transition: 'opacity 0.15s',
-          }}
-        >
-          <svg width="12" height="12" viewBox="0 0 12 12" style={{ position: 'absolute', bottom: 2, right: 2 }}>
-            <path d="M0 12 L12 0" stroke="var(--delab-text-secondary, #aaa)" strokeWidth="1.5" fill="none" />
-            <path d="M4 12 L12 4" stroke="var(--delab-text-secondary, #aaa)" strokeWidth="1.5" fill="none" />
-            <path d="M8 12 L12 8" stroke="var(--delab-text-secondary, #aaa)" strokeWidth="1.5" fill="none" />
-          </svg>
-        </div>
+        {docked && (
+          <PanelFooter
+            showAll={showAll}
+            onShowAllChange={setShowAll}
+            showAllToggle={view === 'style' && mode === 'content'}
+            modifiedCount={view === 'style' ? data?.modifiedCount ?? 0 : 0}
+            onResetAll={view === 'style' ? onResetAll : undefined}
+            showThemeToggle={showThemeToggle}
+          />
+        )}
+
+        {!docked && (
+          <div
+            ref={resizeHandleRef}
+            onMouseDown={onResizeStart}
+            onMouseEnter={() => { if (resizeHandleRef.current) resizeHandleRef.current.style.opacity = '1'; }}
+            onMouseLeave={() => { if (resizeHandleRef.current) resizeHandleRef.current.style.opacity = '0'; }}
+            style={{
+              position: 'absolute', bottom: 0, right: 0,
+              width: 20, height: 20, cursor: 'ew-resize',
+              zIndex: 10, opacity: 0, transition: 'opacity 0.15s',
+            }}
+          >
+            <svg width="12" height="12" viewBox="0 0 48 48" fill="none" style={{ position: 'absolute', bottom: 2, right: 2 }}>
+              <path d="M8 40L40 8" stroke="var(--delab-text-secondary, #aaa)" strokeWidth="3.6" strokeLinecap="round" />
+              <path d="M22 40L40 22" stroke="var(--delab-text-secondary, #aaa)" strokeWidth="3.6" strokeLinecap="round" />
+              <path d="M36 40L40 36" stroke="var(--delab-text-secondary, #aaa)" strokeWidth="3.6" strokeLinecap="round" />
+            </svg>
+          </div>
+        )}
       </div>
     </ThemeProvider>
   );
@@ -268,112 +312,81 @@ function ToggleBar({ showAll, onChange }: { showAll: boolean; onChange: (v: bool
   );
 }
 
-// --- Imperative API for content-script ---
+const footerIconBtn: React.CSSProperties = {
+  appearance: 'none',
+  background: 'transparent',
+  border: 'none',
+  borderRadius: 6,
+  cursor: 'pointer',
+  padding: 4,
+  color: 'var(--delab-text-secondary, #57575e)',
+  lineHeight: 1,
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  transition: 'background 0.12s ease, color 0.12s ease',
+};
 
-export interface PanelCallbacks {
-  onClose: () => void;
-  /** Write a declaration to the inspected element; returns false when rejected */
-  onCommit: (prop: string, value: string) => boolean;
-  /** Revert a single property to its pre-edit value */
-  onReset: (prop: string) => void;
-  /** Revert every edit made on the current element */
-  onResetAll: () => void;
-  /** 评论列表：定位到元素 */
-  onLocateComment: (id: string) => void;
-  onToggleResolveComment: (thread: CommentThread) => void;
-  onCopyAllComments: () => void;
-  /** 评论截图查看大图 */
-  onPreviewCommentImage: (dataUrl: string) => void;
-}
+/** 侧边栏停靠时的底部工具条：Show all + 一键还原 + 明暗切换 */
+function PanelFooter({
+  showAll, onShowAllChange, showAllToggle, modifiedCount, onResetAll, showThemeToggle,
+}: {
+  showAll: boolean;
+  onShowAllChange: (v: boolean) => void;
+  showAllToggle: boolean;
+  modifiedCount: number;
+  onResetAll?: () => void;
+  showThemeToggle: boolean;
+}) {
+  const { isDark, toggle } = useTheme();
 
-export class FloatingPanelManager {
-  private container: HTMLElement;
-  private root: ReturnType<typeof createRoot>;
-  private _data: StylePayload | null = null;
-  private _mode: 'empty' | 'content' = 'empty';
-  private _view: 'style' | 'comments' = 'style';
-  private _comments: CommentThread[] = [];
-  private _activeCommentId: string | null = null;
-  private _visible = false;
-  private callbacks: PanelCallbacks;
-
-  constructor(mount: ShadowRoot, callbacks: PanelCallbacks) {
-    this.callbacks = callbacks;
-    this.container = document.createElement('div');
-    this.container.id = 'delab-floating-root';
-    mount.appendChild(this.container);
-    this.root = createRoot(this.container);
-    this._render();
-  }
-
-  private _render() {
-    this.root.render(
-      React.createElement(FloatingPanel, {
-        data: this._data,
-        mode: this._mode,
-        view: this._view,
-        comments: this._comments,
-        activeCommentId: this._activeCommentId,
-        visible: this._visible,
-        onClose: () => {
-          this._visible = false;
-          this._render();
-          this.callbacks.onClose();
-        },
-        onCommit: this.callbacks.onCommit,
-        onReset: this.callbacks.onReset,
-        onResetAll: this.callbacks.onResetAll,
-        onLocateComment: this.callbacks.onLocateComment,
-        onToggleResolveComment: this.callbacks.onToggleResolveComment,
-        onCopyAllComments: this.callbacks.onCopyAllComments,
-        onPreviewCommentImage: this.callbacks.onPreviewCommentImage,
-      })
-    );
-  }
-
-  showEmpty() {
-    this._view = 'style';
-    this._mode = 'empty';
-    this._visible = true;
-    this._data = null;
-    this._render();
-  }
-
-  showData(data: StylePayload) {
-    this._view = 'style';
-    this._data = data;
-    this._mode = 'content';
-    this._visible = true;
-    this._render();
-  }
-
-  /** 评论模式：面板展示站点级评论列表 */
-  showComments(comments: CommentThread[], activeId: string | null = null) {
-    this._view = 'comments';
-    this._comments = comments;
-    this._activeCommentId = activeId;
-    this._visible = true;
-    this._render();
-  }
-
-  /** 评论增删改后刷新列表内容，不改变当前视图 */
-  setComments(comments: CommentThread[], activeId: string | null = null) {
-    this._comments = comments;
-    this._activeCommentId = activeId;
-    if (this._view === 'comments') this._render();
-  }
-
-  hide() {
-    this._visible = false;
-    this._render();
-  }
-
-  isVisible(): boolean {
-    return this._visible;
-  }
-
-  destroy() {
-    this.root.unmount();
-    this.container.remove();
-  }
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+      gap: 8, padding: '4px 8px', flexShrink: 0,
+      borderTop: '1px solid var(--delab-border, #e5e5e5)',
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', minWidth: 0 }}>
+        {showAllToggle && (
+          <label style={{
+            display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer',
+            fontSize: 11, color: 'var(--delab-text-secondary, #57575e)',
+          }}>
+            <input
+              type="checkbox"
+              checked={showAll}
+              onChange={e => onShowAllChange(e.target.checked)}
+              style={{ accentColor: 'var(--delab-accent, #32f08c)' }}
+            />
+            Show all
+          </label>
+        )}
+      </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+        {modifiedCount > 0 && onResetAll && (
+          <button
+            onClick={onResetAll}
+            title="Revert all edits on this element"
+            style={{
+              ...footerIconBtn, padding: '4px 8px', fontSize: 11,
+              color: 'var(--delab-accent, #32f08c)',
+            }}
+          >
+            Reset {modifiedCount}
+          </button>
+        )}
+        {showThemeToggle && (
+          <button
+            onClick={toggle}
+            title="Toggle theme"
+            style={footerIconBtn}
+            onMouseEnter={e => { e.currentTarget.style.background = 'var(--delab-row-hover, rgba(0,0,0,0.045))'; }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
+          >
+            {isDark ? <SunIcon size={14} /> : <MoonIcon size={14} />}
+          </button>
+        )}
+      </div>
+    </div>
+  );
 }

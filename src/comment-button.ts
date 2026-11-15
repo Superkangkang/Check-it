@@ -22,9 +22,9 @@ export class CommentButton {
     this.node.title = '添加评论';
     this.node.setAttribute('aria-label', '添加评论');
     this.node.innerHTML = `
-      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-        stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2Z"/>
+      <svg width="12" height="12" viewBox="0 0 48 48" fill="none" stroke="currentColor"
+        stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M42 30C42 31.0609 41.5786 32.0783 40.8284 32.8284C40.0783 33.5786 39.0609 34 38 34H14L6 42V10C6 8.93913 6.42143 7.92172 7.17157 7.17157C7.92172 6.42143 8.93913 6 10 6H38C39.0609 6 40.0783 6.42143 40.8284 7.17157C41.5786 7.92172 42 8.93913 42 10V30Z"/>
       </svg>
       <span>评论</span>
     `;

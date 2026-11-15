@@ -4,11 +4,12 @@ import { InspectState, InspectStateManager } from './state';
 import { BoxModelOverlay } from './box-model-overlay';
 import { GlassLabel } from './box-model-tooltip';
 import { ShadowHost } from './shadow-dom';
-import { StyleExtractor } from './style-extractor';
+import { StyleExtractor, countModifiedControls } from './style-extractor';
 import { Viewfinder } from './highlight';
+import { MeasureOverlay } from './measure-overlay';
 import { injectFonts } from './fonts';
 import { EditSession } from './edit-session';
-import { FloatingPanelManager } from './components/FloatingPanel';
+import { PanelBridge } from './panel-bridge';
 import { CommentPins } from './comment-pins';
 import { CommentPopover } from './comment-popover';
 import { CommentButton } from './comment-button';
@@ -35,14 +36,19 @@ class DelabApp {
   private glassLabel: GlassLabel;
   private hoverFinder: Viewfinder;
   private selectionFinder: Viewfinder;
+  private measureOverlay: MeasureOverlay;
   private extractor: StyleExtractor;
-  private panelMgr: FloatingPanelManager;
+  private panelMgr: PanelBridge;
   private pins: CommentPins;
   private popover: CommentPopover;
   private commentButton: CommentButton;
   private pointer: PointerCursor;
   private lightbox: Lightbox;
-  private switcher: ModeSwitcher;
+  /** 设备预览的 iframe 内不创建切换器与视口控制，模式由父页面下发 */
+  private switcher: ModeSwitcher | null = null;
+  private embedded: boolean;
+  /** iframe 内是否已激活 */
+  private embeddedActive = false;
 
   /** 当前模式，插件激活时默认进入走查模式 */
   private mode: DelabMode = 'inspect';
@@ -51,11 +57,19 @@ class DelabApp {
 
   private hoverTimer: ReturnType<typeof setTimeout> | null = null;
   private lastHoverTarget: Element | null = null;
+  /** 当前鼠标悬停的元素，供按住 Alt 时实时量距 */
+  private hoveredTarget: Element | null = null;
+  /** 当前模拟视口尺寸（null = 按真实窗口） */
+  private viewportState: { width: number; height: number } | null = null;
+  /** 按住 Alt 进入测量态 */
+  private measuring = false;
 
   /** Element currently locked for inspection */
   private lockedTarget: Element | null = null;
   /** Edit records for the locked element */
   private session: EditSession | null = null;
+  /** 按元素缓存会话：切回已改过的元素时仍保留「已修改」高亮 */
+  private sessions = new WeakMap<HTMLElement, EditSession>();
   private refreshQueued = false;
 
   private comments: CommentThread[] = [];
@@ -65,7 +79,8 @@ class DelabApp {
   private toastTimer: ReturnType<typeof setTimeout> | null = null;
   private cursorStyle: HTMLStyleElement | null = null;
 
-  constructor() {
+  constructor(options: { embedded?: boolean } = {}) {
+    this.embedded = options.embedded === true;
     this.stateManager = new InspectStateManager();
     this.shadowHost = new ShadowHost();
     // 先于任何浮层把主题变量写到页面上，避免切换器等先用错误的 fallback 闪一下
@@ -76,6 +91,7 @@ class DelabApp {
     this.hoverFinder = new Viewfinder(root);
     // 选中态用不透明的品牌绿，和半透明悬停态区分开
     this.selectionFinder = new Viewfinder(root, 'var(--delab-accent, #32f08c)', 'delab-selection-frame', 1);
+    this.measureOverlay = new MeasureOverlay(root);
     this.pins = new CommentPins(root);
     // 大图预览要压在最上层，先于指针创建，保证自定义指针仍可见
     this.lightbox = new Lightbox(root);
@@ -90,17 +106,22 @@ class DelabApp {
     });
     this.extractor = new StyleExtractor();
 
-    this.switcher = new ModeSwitcher(root, {
-      onSelect: mode => this.setMode(mode),
-      onClose: () => {
-        this.exitInspectMode();
-        chrome.runtime.sendMessage({ type: 'INSPECT_MODE_CHANGED', active: false });
-      },
-    });
+    if (!this.embedded) {
+      this.switcher = new ModeSwitcher(root, {
+        onSelect: mode => this.setMode(mode),
+        onClose: () => {
+          this.exitInspectMode();
+          chrome.runtime.sendMessage({ type: 'INSPECT_MODE_CHANGED', active: false });
+        },
+        onViewportChange: (width, height) => this.openWorkspace(width, height),
+        onViewportReset: () => this.resetViewport(true),
+      });
+    }
 
-    // 传入 close 回调：直接退出检查模式，无需消息往返
-    this.panelMgr = new FloatingPanelManager(root, {
+    // 面板 UI 在浏览器侧边栏 / 设备预览工作区：这里只负责同步数据、接收指令
+    this.panelMgr = new PanelBridge({
       onClose: () => {
+        if (this.embedded) return;
         this.exitInspectMode();
         chrome.runtime.sendMessage({ type: 'INSPECT_MODE_CHANGED', active: false });
       },
@@ -108,13 +129,18 @@ class DelabApp {
       onReset: this.handleReset,
       onResetAll: this.handleResetAll,
       onLocateComment: id => this.locateComment(id),
-      onToggleResolveComment: thread => { void this.toggleResolve(thread); },
-      onCopyAllComments: () => { void this.handleCopyAll(); },
-      onPreviewCommentImage: dataUrl => this.lightbox.show(dataUrl),
+      onToggleResolveComment: id => {
+        const thread = this.comments.find(item => item.id === id);
+        if (thread) void this.toggleResolve(thread);
+      },
+    }, {
+      respondToHello: !this.embedded,
+      scope: this.embedded ? 'workspace' : undefined,
     });
 
+    window.addEventListener('blur', this.handleWindowBlur);
     injectFonts();
-    this.init();
+    if (!this.embedded) this.init();
   }
 
   private init() {
@@ -125,6 +151,13 @@ class DelabApp {
       if (message.type === 'EXIT_INSPECT') {
         this.exitInspectMode();
       }
+      if (message.type === 'VIEWPORT_STATE') {
+        this.viewportState = message.state ?? null;
+        this.switcher?.setViewport(this.viewportState);
+      }
+      if (message.type === 'DEBUGGER_VIEWPORT') {
+        this.applyViewport(Number(message.width) || 375, Number(message.height) || 812);
+      }
     });
   }
 
@@ -132,7 +165,9 @@ class DelabApp {
   private enterInspectMode() {
     this.mode = 'inspect';
     document.addEventListener('keydown', this.handleKeyDown, true);
-    this.switcher.show(this.mode);
+    document.addEventListener('keyup', this.handleKeyUp, true);
+    this.switcher?.show(this.mode);
+    this.syncViewport();
     void this.openComments();
     this.applyMode();
   }
@@ -141,14 +176,17 @@ class DelabApp {
   private exitInspectMode() {
     this.teardownMode();
     document.removeEventListener('keydown', this.handleKeyDown, true);
-    this.switcher.hide();
+    document.removeEventListener('keyup', this.handleKeyUp, true);
+    this.switcher?.hide();
+    // 退出时还原真实视口，避免页面停留在模拟尺寸
+    this.resetViewport(false);
     this.appliedMode = null;
     this.stateManager.setState(InspectState.IDLE);
   }
 
   /** 切换模式（快捷键 / 切换器） */
   private setMode(mode: DelabMode) {
-    if (!this.switcher.isVisible()) return;
+    if (!this.switcher?.isVisible()) return;
     this.mode = mode;
     this.switcher.setMode(mode);
     this.applyMode();
@@ -194,6 +232,8 @@ class DelabApp {
     this.pointer.disable();
     if (this.hoverTimer) { clearTimeout(this.hoverTimer); this.hoverTimer = null; }
     this.lastHoverTarget = null;
+    this.hoveredTarget = null;
+    this.measuring = false;
     // 页面上的修改保留，仅丢弃会话引用
     this.lockedTarget = null;
     this.session = null;
@@ -205,12 +245,19 @@ class DelabApp {
     this.pins.clear();
     this.hoverFinder.hide();
     this.selectionFinder.hide();
+    this.measureOverlay.hide();
     this.boxModelOverlay.hide();
     this.glassLabel.unpin();
     this.panelMgr.hide();
   }
 
   private handleKeyDown = (e: KeyboardEvent) => {
+    // 按住 Alt：选中元素后进入量距态，悬浮其他元素即显示两者间距
+    if (e.key === 'Alt') {
+      if (!this.isEditingField()) this.setMeasuring(true);
+      return;
+    }
+
     if (e.key === 'Escape') {
       // 大图优先关闭，保留底下的评论弹层
       if (this.lightbox.isOpen()) {
@@ -232,6 +279,9 @@ class DelabApp {
       return;
     }
 
+    // 单键快捷键由外层页面统一处理
+    if (this.embedded) return;
+
     // 单键快捷键：输入中或带修饰键时不响应
     if (this.isEditingField() || e.metaKey || e.ctrlKey || e.altKey) return;
     const key = e.key.toLowerCase();
@@ -247,8 +297,17 @@ class DelabApp {
     }
   };
 
+  private handleKeyUp = (e: KeyboardEvent) => {
+    if (e.key === 'Alt') this.setMeasuring(false);
+  };
+
+  private handleWindowBlur = () => {
+    this.setMeasuring(false);
+  };
+
   /** 快捷键切换：把焦点从切换器按钮移开，避免原按钮残留焦点描边 */
   private switchModeByKey(mode: DelabMode) {
+    if (!this.switcher) return;
     this.setMode(mode);
     const active = this.shadowHost.getRoot().activeElement as HTMLElement | null;
     if (active && active.closest('#delab-mode-switcher')) active.blur();
@@ -265,6 +324,8 @@ class DelabApp {
   /** 悬停离开页面元素（进入 body / 插件 UI）时清掉悬停态，避免旧框残留 */
   private clearHover() {
     this.hoverFinder.hide();
+    this.hoveredTarget = null;
+    this.measureOverlay.hide();
     if (this.lockedTarget) return; // 锁定后盒模型固定在选中元素上，不清
     this.boxModelOverlay.hide();
     if (this.hoverTimer) {
@@ -286,6 +347,17 @@ class DelabApp {
       return;
     }
 
+    this.hoveredTarget = target;
+
+    // 以真实的 Alt 键状态为准，避免窗口失焦等情况下状态残留
+    if (e.altKey !== this.measuring) this.setMeasuring(e.altKey);
+
+    // 测量态：用悬浮元素与选中元素量距，不显示常规悬停框
+    if (this.measuring) {
+      this.refreshMeasurement();
+      return;
+    }
+
     // 已选中的元素保留自己的实线框，悬停不再覆盖它
     if (target === this.lockedTarget) this.hoverFinder.hide();
     else this.hoverFinder.show(target);
@@ -304,6 +376,50 @@ class DelabApp {
     }, 80);
   };
 
+  // --- 量距（按住 Alt） ---
+
+  /** 开 / 关测量态；仅走查模式下、已选中元素且没有在写评论时生效 */
+  private setMeasuring(on: boolean) {
+    if (on === this.measuring) return;
+
+    if (on) {
+      if (this.mode !== 'inspect' || !this.lockedTarget) return;
+      if (this.composing || this.popover.isOpen()) return;
+      this.measuring = true;
+      this.refreshMeasurement();
+      return;
+    }
+
+    this.measuring = false;
+    this.measureOverlay.hide();
+    this.restoreHoverFrame();
+  }
+
+  /** 按当前悬停元素重算测量线 */
+  private refreshMeasurement() {
+    const from = this.lockedTarget;
+    const to = this.hoveredTarget;
+
+    // 测量态下不显示常规悬停框，用虚线框 + 测量线代替
+    this.hoverFinder.hide();
+
+    if (!this.measuring || !from || !to || to === from || !to.isConnected) {
+      this.measureOverlay.hide();
+      return;
+    }
+    this.measureOverlay.show(from, to);
+  }
+
+  /** 松开 Alt 后恢复当前悬停元素的常规高亮 */
+  private restoreHoverFrame() {
+    const target = this.hoveredTarget;
+    if (!target || !target.isConnected || target === this.lockedTarget) {
+      this.hoverFinder.hide();
+      return;
+    }
+    this.hoverFinder.show(target);
+  }
+
   private handleClick = (e: MouseEvent) => {
     const target = e.target as Element;
     if (target === document.body || target === document.documentElement) return;
@@ -311,6 +427,7 @@ class DelabApp {
 
     e.preventDefault();
     e.stopPropagation();
+    this.measureOverlay.hide();
 
     // 评论模式：点击即评论，直接弹出输入框（不显示类名标签）
     if (this.mode === 'comment') {
@@ -357,7 +474,8 @@ class DelabApp {
   private refreshCommentsUI() {
     this.renderPins();
     this.panelMgr.setComments(this.comments, this.activeCommentId);
-    this.switcher.setCommentCount(this.comments.filter(thread => !thread.resolved).length);
+    const openCount = this.comments.filter(thread => !thread.resolved).length;
+    this.switcher?.setCommentCount(openCount);
   }
 
   private renderPins() {
@@ -525,6 +643,94 @@ class DelabApp {
     }, 1800);
   }
 
+  // --- 视口尺寸（chrome.debugger 模拟，作为设备预览的回退） ---
+
+  /** 打开插件时同步后台记录的模拟视口，刷新页面后按钮状态不丢失 */
+  private syncViewport() {
+    if (this.embedded) return;
+    chrome.runtime.sendMessage({ type: 'VIEWPORT_GET' }, response => {
+      if (chrome.runtime.lastError) return;
+      this.viewportState = response?.state ?? null;
+      this.switcher?.setViewport(this.viewportState);
+    });
+  }
+
+  private applyViewport(width: number, height: number) {
+    if (this.embedded) return;
+    chrome.runtime.sendMessage(
+      {
+        type: 'VIEWPORT_SET',
+        width,
+        height,
+        deviceScaleFactor: window.devicePixelRatio || 1,
+      },
+      response => {
+        if (chrome.runtime.lastError || !response?.ok) {
+          this.showToast(response?.error || '视口调整失败：请先关闭该标签页的 DevTools');
+          return;
+        }
+        this.viewportState = {
+          width: response.width ?? width,
+          height: response.height ?? height,
+        };
+        this.switcher?.setViewport(this.viewportState);
+        this.showToast(`视口 ${this.viewportState.width} × ${this.viewportState.height}`);
+      }
+    );
+  }
+
+  private resetViewport(notify: boolean) {
+    if (this.embedded) return;
+    chrome.runtime.sendMessage({ type: 'VIEWPORT_RESET' }, () => {
+      this.viewportState = null;
+      if (chrome.runtime.lastError) return;
+      this.switcher?.setViewport(null);
+      if (notify) this.showToast('视口已还原为窗口大小');
+    });
+  }
+
+  // --- 设备预览工作区（独立标签页） ---
+
+  /** 在新标签页打开设备预览：左侧设备画布 + 右侧样式面板 */
+  private openWorkspace(width: number, height: number) {
+    if (this.embedded) return;
+    // 避免原页面停留在 debugger 模拟尺寸
+    if (this.viewportState) this.resetViewport(false);
+    chrome.runtime.sendMessage(
+      { type: 'OPEN_WORKSPACE', url: location.href, width, height },
+      response => {
+        if (chrome.runtime.lastError || !response?.ok) {
+          this.showToast(response?.error || '无法打开设备预览');
+          return;
+        }
+        this.showToast('已在新标签页打开设备预览');
+      }
+    );
+  }
+
+  // --- iframe 内：设备预览子页面 ---
+
+  /** 父页面握手成功后激活走查（iframe 内不创建切换器） */
+  activateEmbedded(mode: DelabMode) {
+    this.mode = mode;
+    if (this.embeddedActive) {
+      this.applyMode();
+      return;
+    }
+    this.embeddedActive = true;
+    document.addEventListener('keydown', this.handleKeyDown, true);
+    document.addEventListener('keyup', this.handleKeyUp, true);
+    void this.openComments();
+    this.applyMode();
+  }
+
+  /** 父页面切换走查 / 评论 / 浏览器模式 */
+  setEmbeddedMode(mode: DelabMode) {
+    if (!this.embeddedActive) return;
+    this.mode = mode;
+    this.applyMode();
+  }
+
   // --- 指针 ---
 
   /** 隐藏系统指针，改用跟随鼠标的 DOM 指针 */
@@ -557,7 +763,13 @@ class DelabApp {
     if (target === this.lockedTarget) return;
     this.lockedTarget = target;
     const el = target as HTMLElement;
-    this.session = el && el.style ? new EditSession(el) : null;
+    if (!el || !el.style) { this.session = null; return; }
+    let session = this.sessions.get(el);
+    if (!session) {
+      session = new EditSession(el);
+      this.sessions.set(el, session);
+    }
+    this.session = session;
   }
 
   /** Write a declaration to the locked element, then refresh the panel. */
@@ -603,7 +815,7 @@ class DelabApp {
       classes: (target as HTMLElement).className || '',
       groups,
       boxModel,
-      modifiedCount: this.session ? this.session.count() : 0,
+      modifiedCount: countModifiedControls(groups),
     });
 
     this.showSelectionChrome(target);
@@ -626,4 +838,31 @@ function isTextField(node: HTMLElement | null): boolean {
   return node.isContentEditable;
 }
 
-new DelabApp();
+if (window.top !== window && !(window as unknown as { __delabPreviewChild?: boolean }).__delabPreviewChild) {
+  // 设备预览工作区的 iframe：等父页面握手后再激活
+  // 幂等标记：manifest 注入与工作区补注入可能同时发生
+  (window as unknown as { __delabPreviewChild?: boolean }).__delabPreviewChild = true;
+  let app: DelabApp | null = null;
+
+  window.addEventListener('message', event => {
+    if (event.source !== window.parent) return;
+
+    const data = event.data as { type?: string; token?: string; mode?: DelabMode } | null;
+    if (!data) return;
+
+    if (data.type === 'DELAB_PREVIEW_INIT') {
+      const mode: DelabMode = data.mode === 'browse' || data.mode === 'comment' ? data.mode : 'inspect';
+      app ??= new DelabApp({ embedded: true });
+      app.activateEmbedded(mode);
+      // 父页面是扩展工作区（跨域），用 * 回传随机 token
+      window.parent.postMessage({ type: 'DELAB_PREVIEW_READY', token: data.token }, '*');
+      return;
+    }
+
+    if (data.type === 'DELAB_PREVIEW_MODE' && app) {
+      if (data.mode === 'inspect' || data.mode === 'browse' || data.mode === 'comment') {
+        app.setEmbeddedMode(data.mode);
+      }
+    }
+  });
+}

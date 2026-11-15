@@ -35,8 +35,10 @@ export function StylePanel({
 }: StylePanelProps) {
   const visibleGroups: Array<{ name: string; props: StyleProperty[] }> = [];
   for (const group of groups) {
-    // 位置组始终完整展示；flex 三件套属于实现细节，默认隐藏
-    const props = showAll || group.name === 'Position'
+    // 位置组默认收起，勾选 Show all 后再展示
+    if (!showAll && group.name === 'Position') continue;
+    // flex 三件套属于实现细节，默认隐藏
+    const props = showAll
       ? group.properties
       : group.properties.filter(p =>
           !FLEX_DETAIL_KEYS.includes(p.name)
@@ -198,22 +200,21 @@ function PositionModeButton({ position, onCommit }: {
         marginLeft: 'auto', width: 26, height: 26, padding: 0, flexShrink: 0,
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         borderRadius: 6, cursor: 'pointer',
-        border: absolute ? 'none' : '1px solid var(--delab-border, rgba(0,0,0,0.08))',
-        background: absolute
-          ? 'var(--delab-accent, #32f08c)'
-          : 'var(--delab-field-bg, #ffffff)',
+        border: 'none',
+        background: absolute ? 'var(--delab-accent, #32f08c)' : 'transparent',
         color: absolute
           ? 'var(--delab-accent-contrast, #0b0b0c)'
           : 'var(--delab-text-secondary, #57575e)',
+        transition: 'background 0.12s ease, color 0.12s ease',
       }}
     >
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-        strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-        <path d="M4 8V5a1 1 0 0 1 1-1h3" />
-        <path d="M16 4h3a1 1 0 0 1 1 1v3" />
-        <path d="M20 16v3a1 1 0 0 1-1 1h-3" />
-        <path d="M8 20H5a1 1 0 0 1-1-1v-3" />
-        <circle cx="12" cy="12" r="2.5" />
+      <svg width="14" height="14" viewBox="0 0 48 48" fill="none" stroke="currentColor"
+        strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+        <path d="M6 17.25V10.5C6 9.30652 6.4741 8.16193 7.31802 7.31802C8.16193 6.47411 9.30652 6 10.5 6H17.25" />
+        <path d="M30.75 6H37.5C38.6935 6 39.8381 6.47411 40.682 7.31802C41.5259 8.16193 42 9.30652 42 10.5V17.25" />
+        <path d="M42 30.75V37.5C42 38.6935 41.5259 39.8381 40.682 40.682C39.8381 41.5259 38.6935 42 37.5 42H30.75" />
+        <path d="M17.25 42H10.5C9.30652 42 8.16193 41.5259 7.31802 40.682C6.4741 39.8381 6 38.6935 6 37.5V30.75" />
+        <rect x="16" y="16" width="16" height="16" rx="3" />
       </svg>
     </button>
   );
