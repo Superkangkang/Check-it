@@ -171,7 +171,7 @@ async function readWorkspaceSize(): Promise<{ width: number; height: number }> {
 
 async function openWorkspace(sourceTabId: number, url: string, width: number, height: number) {
   const workspaceUrl = chrome.runtime.getURL(
-    `workspace.html?url=${encodeURIComponent(url)}&w=${width}&h=${height}`
+    `workspace.html?url=${encodeURIComponent(url)}&w=${width}&h=${height}&fit=1`
   );
   const tab = await chrome.tabs.create({ url: workspaceUrl, active: true, openerTabId: sourceTabId });
   if (tab.id != null) {

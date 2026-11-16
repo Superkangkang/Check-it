@@ -28,6 +28,8 @@ export interface StylePayload {
   boxModel?: BoxModel;
   /** How many declarations were edited on this element */
   modifiedCount?: number;
+  /** 左侧 DOM 树中的路径，用于选中联动 */
+  domPath?: number[];
 }
 
 interface PanelPosition {

@@ -13,6 +13,19 @@ export interface PanelBridgeCallbacks {
   /** 评论列表定位到元素 */
   onLocateComment: (id: string) => void;
   onToggleResolveComment: (id: string) => void;
+  /** DOM 树：选中 / 悬浮 / 刷新 */
+  onSelectDom: (path: number[]) => void;
+  onHoverDom: (path: number[] | null) => void;
+  onRefreshDom: () => void;
+}
+
+/** 左侧 DOM 树节点（path 为相对 body 的子元素索引路径） */
+export interface DomNode {
+  tag: string;
+  id?: string;
+  cls?: string;
+  path: number[];
+  children?: DomNode[];
 }
 
 type PanelView = 'style' | 'comments';
@@ -86,6 +99,15 @@ export class PanelBridge {
     this.pushState();
   }
 
+  /** 广播左侧 DOM 树 */
+  showDom(tree: DomNode[]) {
+    void chrome.runtime.sendMessage({
+      type: 'PANEL_DOM',
+      scope: this.scope,
+      tree,
+    }).catch(() => {});
+  }
+
   private pushState() {
     void chrome.runtime.sendMessage({
       type: 'PANEL_STATE',
@@ -146,6 +168,18 @@ export class PanelBridge {
         return;
       case 'toggleResolve':
         this.callbacks.onToggleResolveComment(String(message.id ?? ''));
+        sendResponse({ ok: true });
+        return;
+      case 'selectDom':
+        this.callbacks.onSelectDom(Array.isArray(message.path) ? message.path as number[] : []);
+        sendResponse({ ok: true });
+        return;
+      case 'hoverDom':
+        this.callbacks.onHoverDom(Array.isArray(message.path) ? message.path as number[] : null);
+        sendResponse({ ok: true });
+        return;
+      case 'refreshDom':
+        this.callbacks.onRefreshDom();
         sendResponse({ ok: true });
         return;
       case 'close':

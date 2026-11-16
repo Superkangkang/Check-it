@@ -9,7 +9,7 @@ import { Viewfinder } from './highlight';
 import { MeasureOverlay } from './measure-overlay';
 import { injectFonts } from './fonts';
 import { EditSession } from './edit-session';
-import { PanelBridge } from './panel-bridge';
+import { PanelBridge, type DomNode } from './panel-bridge';
 import { CommentPins } from './comment-pins';
 import { CommentPopover } from './comment-popover';
 import { CommentButton } from './comment-button';
@@ -28,6 +28,11 @@ import {
 import { ElementIdentity, describeElement } from './element-identity';
 import { captureElementSnapshot } from './snapshot';
 import { ThemeManager } from './theme';
+
+/** 左侧 DOM 树中不展示的标签 */
+const DOM_TREE_SKIP = new Set([
+  'SCRIPT', 'STYLE', 'LINK', 'META', 'NOSCRIPT', 'TEMPLATE', 'HEAD', 'TITLE', 'BASE',
+]);
 
 class DelabApp {
   private stateManager: InspectStateManager;
@@ -133,6 +138,9 @@ class DelabApp {
         const thread = this.comments.find(item => item.id === id);
         if (thread) void this.toggleResolve(thread);
       },
+      onSelectDom: path => this.selectDomPath(path),
+      onHoverDom: path => this.hoverDomPath(path),
+      onRefreshDom: () => this.sendDomTree(),
     }, {
       respondToHello: !this.embedded,
       scope: this.embedded ? 'workspace' : undefined,
@@ -279,8 +287,18 @@ class DelabApp {
       return;
     }
 
-    // 单键快捷键由外层页面统一处理
-    if (this.embedded) return;
+    // 嵌入预览：快捷键通过父页面切换模式
+    if (this.embedded) {
+      if (this.isEditingField() || e.metaKey || e.ctrlKey || e.altKey) return;
+      const key = e.key.toLowerCase();
+      const mode = key === 'a' ? 'browse' : key === 'c' ? 'inspect' : key === 'm' ? 'comment' : null;
+      if (!mode) return;
+      e.preventDefault();
+      try {
+        window.parent.postMessage({ type: 'DELAB_PREVIEW_MODE_REQUEST', mode }, '*');
+      } catch { /* ignore */ }
+      return;
+    }
 
     // 单键快捷键：输入中或带修饰键时不响应
     if (this.isEditingField() || e.metaKey || e.ctrlKey || e.altKey) return;
@@ -446,6 +464,8 @@ class DelabApp {
     this.glassLabel.pin(target);
     this.boxModelOverlay.show(target);
     this.refresh();
+    // 页面结构可能已变化，同步一次树，保证左侧能定位到该元素
+    this.sendDomTree();
   };
 
   // --- 评论 ---
@@ -715,6 +735,7 @@ class DelabApp {
     this.mode = mode;
     if (this.embeddedActive) {
       this.applyMode();
+      this.sendDomTree();
       return;
     }
     this.embeddedActive = true;
@@ -722,6 +743,7 @@ class DelabApp {
     document.addEventListener('keyup', this.handleKeyUp, true);
     void this.openComments();
     this.applyMode();
+    this.sendDomTree();
   }
 
   /** 父页面切换走查 / 评论 / 浏览器模式 */
@@ -729,6 +751,95 @@ class DelabApp {
     if (!this.embeddedActive) return;
     this.mode = mode;
     this.applyMode();
+  }
+
+  // --- 左侧 DOM 树 ---
+
+  private sendDomTree() {
+    this.panelMgr.showDom(this.buildDomTree());
+  }
+
+  private domChildren(el: Element): Element[] {
+    return Array.from(el.children).filter(child => (
+      !DOM_TREE_SKIP.has(child.tagName)
+      && child.id !== 'delab-root'
+      && child.id !== 'delab-floating-root'
+    ));
+  }
+
+  private buildDomTree(): DomNode[] {
+    const body = document.body;
+    if (!body) return [];
+
+    let count = 0;
+    const walk = (el: Element, path: number[], depth: number): DomNode => {
+      count++;
+      const children = depth >= 14 || count >= 2000
+        ? []
+        : this.domChildren(el).map((child, index) => walk(child, [...path, index], depth + 1));
+      const cls = Array.from(el.classList).slice(0, 2).join('.');
+      return {
+        tag: el.tagName.toLowerCase(),
+        id: el.id && !el.id.startsWith('delab') ? el.id : undefined,
+        cls: cls || undefined,
+        path,
+        children,
+      };
+    };
+
+    return [walk(body, [], 0)];
+  }
+
+  private resolveDomPath(path: number[]): Element | null {
+    let el: Element | null = document.body;
+    for (const index of path) {
+      if (!el) return null;
+      el = this.domChildren(el)[index] ?? null;
+    }
+    return el;
+  }
+
+  private computeDomPath(target: Element): number[] {
+    const path: number[] = [];
+    let node: Element | null = target;
+    while (node && node !== document.body) {
+      const parent: Element | null = node.parentElement;
+      if (!parent) return [];
+      const index = this.domChildren(parent).indexOf(node);
+      if (index < 0) return [];
+      path.unshift(index);
+      node = parent;
+    }
+    return node === document.body ? path : [];
+  }
+
+  private selectDomPath(path: number[]) {
+    const el = this.resolveDomPath(path);
+    if (!el) return;
+
+    if (this.mode !== 'inspect') {
+      this.setEmbeddedMode('inspect');
+      try {
+        window.parent.postMessage({ type: 'DELAB_PREVIEW_MODE_REQUEST', mode: 'inspect' }, '*');
+      } catch { /* ignore */ }
+    }
+
+    this.stateManager.setState(InspectState.LOCKED);
+    this.lockElement(el);
+    this.glassLabel.pin(el);
+    this.boxModelOverlay.show(el);
+    this.refresh();
+  }
+
+  private hoverDomPath(path: number[] | null) {
+    if (path && this.mode !== 'browse') {
+      const el = this.resolveDomPath(path);
+      if (el) {
+        this.hoverFinder.show(el);
+        return;
+      }
+    }
+    this.hoverFinder.hide();
   }
 
   // --- 指针 ---
@@ -816,6 +927,7 @@ class DelabApp {
       groups,
       boxModel,
       modifiedCount: countModifiedControls(groups),
+      domPath: this.computeDomPath(target),
     });
 
     this.showSelectionChrome(target);
