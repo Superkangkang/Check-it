@@ -4,11 +4,12 @@ import * as React from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { FloatingPanel, StylePayload } from './components/FloatingPanel';
-import { CommentThread, toMarkdown } from './comment-store';
+import { CommentThread, isVisibleThread, toMarkdown } from './comment-store';
 import { ThemeManager, SANS, MONO } from './theme';
 import { isValidValue } from './style-writer';
 import { injectFonts } from './fonts';
 import { SunIcon, MoonIcon } from './components/Icon';
+import { SettingsMenu } from './components/SettingsMenu';
 import type { DomNode } from './panel-bridge';
 
 const themeManager = new ThemeManager();
@@ -105,6 +106,7 @@ function readParams() {
     width: clamp(Number(params.get('w')) || 375, 240, 3840),
     height: clamp(Number(params.get('h')) || 812, 400, 2160),
     fit: params.get('fit') === '1',
+    settings: params.get('settings') === '1',
   };
 }
 
@@ -501,10 +503,12 @@ function WorkspaceApp() {
   const [blocked, setBlocked] = useState(false);
   const [panel, setPanel] = useState<PanelState>(EMPTY_PANEL);
   const [comments, setComments] = useState<CommentThread[]>([]);
+  const [syncingIds, setSyncingIds] = useState<string[]>([]);
   const [preview, setPreview] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [box, setBox] = useState({ width: 0, height: 0 });
   const [sizeMenuOpen, setSizeMenuOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(params.settings);
   const [draftWidth, setDraftWidth] = useState(String(params.width));
   const [draftHeight, setDraftHeight] = useState(String(params.height));
 
@@ -596,6 +600,7 @@ function WorkspaceApp() {
       }
       if (message.type === 'PANEL_COMMENTS') {
         setComments((message.comments as CommentThread[]) ?? []);
+        setSyncingIds(Array.isArray(message.syncingIds) ? message.syncingIds as string[] : []);
         setPanel(prev => ({
           ...prev,
           activeCommentId: (message.activeCommentId as string | null) ?? null,
@@ -742,6 +747,28 @@ function WorkspaceApp() {
     return () => window.removeEventListener('message', onMessage);
   }, []);
 
+  // 截图几何：iframe 里的 content script 截的是整个标签页，需要知道 iframe 的位置和缩放才能裁对区域
+  useEffect(() => {
+    const onMessage = (event: MessageEvent) => {
+      const iframe = iframeRef.current;
+      if (!iframe || event.source !== iframe.contentWindow) return;
+      const data = event.data as { type?: string; token?: string } | null;
+      if (data?.type !== 'DELAB_SNAPSHOT_GEOMETRY_REQUEST') return;
+      const rect = iframe.getBoundingClientRect();
+      try {
+        iframe.contentWindow?.postMessage({
+          type: 'DELAB_SNAPSHOT_GEOMETRY',
+          token: data.token,
+          left: rect.left,
+          top: rect.top,
+          scale,
+        }, '*');
+      } catch { /* ignore */ }
+    };
+    window.addEventListener('message', onMessage);
+    return () => window.removeEventListener('message', onMessage);
+  }, [scale]);
+
   useEffect(() => () => {
     stopPing();
     if (toastTimer.current) clearTimeout(toastTimer.current);
@@ -859,11 +886,14 @@ function WorkspaceApp() {
   };
 
   const copyAll = async () => {
-    if (!comments.length) return;
-    const openCount = comments.filter(thread => !thread.resolved).length;
+    const visible = comments.filter(isVisibleThread);
+    if (!visible.length) {
+      showToast('没有可复制的评论');
+      return;
+    }
     try {
       await writeClipboard(toMarkdown(comments, panel.url || url));
-      showToast(`已复制 ${openCount || comments.length} 条评论，粘贴给 AI 即可`);
+      showToast(`已复制 ${visible.length} 条评论，粘贴给 AI 即可`);
     } catch {
       showToast('复制失败，请再点一次');
     }
@@ -973,6 +1003,7 @@ function WorkspaceApp() {
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0, marginLeft: 'auto' }}>
+          <SettingsMenu onConfigure={() => setSettingsOpen(true)} />
           <button
             type="button"
             onClick={toggleTheme}
@@ -1301,47 +1332,49 @@ function WorkspaceApp() {
           flexDirection: 'column',
           background: 'var(--delab-bg, #f5f5f6)',
         }}>
-          {connected ? (
-            mode === 'browse' ? (
-              <div style={{
-                flex: 1,
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 8,
-                padding: 24,
-                textAlign: 'center',
-              }}>
-                <div style={{ fontSize: 12, fontWeight: 600 }}>浏览器模式</div>
-                <div style={{ fontSize: 11, lineHeight: 1.6, color: 'var(--delab-text-secondary, #57575e)' }}>
-                  页面保持可交互，切回「走查」即可选择元素
-                </div>
+          {settingsOpen || (connected && mode !== 'browse') ? (
+            <FloatingPanel
+              docked
+              visible
+              showThemeToggle={false}
+              settingsOpen={settingsOpen}
+              onSettingsOpenChange={setSettingsOpen}
+              data={panel.data}
+              mode={panel.mode}
+              view={panel.view}
+              comments={comments}
+              activeCommentId={panel.activeCommentId}
+              syncingCommentIds={syncingIds}
+              onClose={() => {}}
+              onCommit={(prop, value) => {
+                if (!isValidValue(prop, value)) return false;
+                sendCommand('commit', { prop, value });
+                return true;
+              }}
+              onReset={prop => sendCommand('reset', { prop })}
+              onResetAll={() => sendCommand('resetAll')}
+              onLocateComment={id => sendCommand('locateComment', { id })}
+              onToggleResolveComment={thread => sendCommand('toggleResolve', { id: thread.id })}
+              onSyncComment={thread => sendCommand('syncComment', { id: thread.id })}
+              onCopyAllComments={() => { void copyAll(); }}
+              onPreviewCommentImage={dataUrl => setPreview(dataUrl)}
+            />
+          ) : connected ? (
+            <div style={{
+              flex: 1,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 8,
+              padding: 24,
+              textAlign: 'center',
+            }}>
+              <div style={{ fontSize: 12, fontWeight: 600 }}>浏览器模式</div>
+              <div style={{ fontSize: 11, lineHeight: 1.6, color: 'var(--delab-text-secondary, #57575e)' }}>
+                页面保持可交互，切回「走查」即可选择元素
               </div>
-            ) : (
-              <FloatingPanel
-                docked
-                visible
-                showThemeToggle={false}
-                data={panel.data}
-                mode={panel.mode}
-                view={panel.view}
-                comments={comments}
-                activeCommentId={panel.activeCommentId}
-                onClose={() => {}}
-                onCommit={(prop, value) => {
-                  if (!isValidValue(prop, value)) return false;
-                  sendCommand('commit', { prop, value });
-                  return true;
-                }}
-                onReset={prop => sendCommand('reset', { prop })}
-                onResetAll={() => sendCommand('resetAll')}
-                onLocateComment={id => sendCommand('locateComment', { id })}
-                onToggleResolveComment={thread => sendCommand('toggleResolve', { id: thread.id })}
-                onCopyAllComments={() => { void copyAll(); }}
-                onPreviewCommentImage={dataUrl => setPreview(dataUrl)}
-              />
-            )
+            </div>
           ) : (
             <div style={{
               flex: 1,

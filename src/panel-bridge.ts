@@ -13,6 +13,8 @@ export interface PanelBridgeCallbacks {
   /** 评论列表定位到元素 */
   onLocateComment: (id: string) => void;
   onToggleResolveComment: (id: string) => void;
+  /** 同步单条评论到企微智能表格 */
+  onSyncComment: (id: string) => void;
   /** DOM 树：选中 / 悬浮 / 刷新 */
   onSelectDom: (path: number[]) => void;
   onHoverDom: (path: number[] | null) => void;
@@ -44,9 +46,12 @@ export class PanelBridge {
   private data: StylePayload | null = null;
   private comments: CommentThread[] = [];
   private activeCommentId: string | null = null;
+  /** 正在上报的评论 id，仅内存态 */
+  private syncingIds: string[] = [];
   /** 上次已发送的评论引用，避免每次改样式都重复传截图 */
   private sentComments: CommentThread[] | null = null;
   private sentActiveId: string | null = null;
+  private sentSyncingKey = '';
   /** 是否曾真正展示过面板；未激活的 frame 不应响应侧边栏的握手 */
   private everShown = false;
   private respondToHello: boolean;
@@ -77,20 +82,22 @@ export class PanelBridge {
   }
 
   /** 评论模式：侧边栏展示站点级评论列表 */
-  showComments(comments: CommentThread[], activeId: string | null = null) {
+  showComments(comments: CommentThread[], activeId: string | null = null, syncingIds: string[] = []) {
     this.visible = true;
     this.everShown = true;
     this.view = 'comments';
     this.comments = comments;
     this.activeCommentId = activeId;
+    this.syncingIds = syncingIds;
     this.pushComments();
     this.pushState();
   }
 
   /** 评论增删改后刷新列表，不改变当前视图 */
-  setComments(comments: CommentThread[], activeId: string | null = null) {
+  setComments(comments: CommentThread[], activeId: string | null = null, syncingIds: string[] = []) {
     this.comments = comments;
     this.activeCommentId = activeId;
+    this.syncingIds = syncingIds;
     this.pushComments();
   }
 
@@ -122,14 +129,22 @@ export class PanelBridge {
   }
 
   private pushComments(force = false) {
-    if (!force && this.comments === this.sentComments && this.activeCommentId === this.sentActiveId) return;
+    const syncingKey = this.syncingIds.join(',');
+    if (
+      !force
+      && this.comments === this.sentComments
+      && this.activeCommentId === this.sentActiveId
+      && syncingKey === this.sentSyncingKey
+    ) return;
     this.sentComments = this.comments;
     this.sentActiveId = this.activeCommentId;
+    this.sentSyncingKey = syncingKey;
     void chrome.runtime.sendMessage({
       type: 'PANEL_COMMENTS',
       scope: this.scope,
       comments: this.comments,
       activeCommentId: this.activeCommentId,
+      syncingIds: this.syncingIds,
     }).catch(() => {});
   }
 
@@ -168,6 +183,10 @@ export class PanelBridge {
         return;
       case 'toggleResolve':
         this.callbacks.onToggleResolveComment(String(message.id ?? ''));
+        sendResponse({ ok: true });
+        return;
+      case 'syncComment':
+        this.callbacks.onSyncComment(String(message.id ?? ''));
         sendResponse({ ok: true });
         return;
       case 'selectDom':

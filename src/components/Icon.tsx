@@ -35,6 +35,25 @@ export function CloseIcon({ size = 16 }: IconProps) {
   );
 }
 
+export function GearIcon({ size = 16 }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+      <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" />
+      <circle cx="12" cy="12" r="3" />
+    </svg>
+  );
+}
+
+export function ChevronLeftIcon({ size = 16 }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 48 48" fill="none" stroke="currentColor"
+      strokeWidth={3.6} strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+      <path d="M30 10 16 24l14 14" />
+    </svg>
+  );
+}
+
 export function InspectIcon({ size = 36 }: IconProps) {
   return (
     <svg width={size} height={size} viewBox="0 0 48 48" fill="none" stroke="currentColor"
@@ -60,6 +79,17 @@ export function CircleCheckIcon({ size = 16 }: IconProps) {
       strokeWidth={3.6} strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
       <circle cx="24" cy="24" r="18" />
       <path d="m17 24 5 5 9-9" />
+    </svg>
+  );
+}
+
+export function CloudUploadIcon({ size = 16 }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 48 48" fill="none" stroke="currentColor"
+      strokeWidth={3.6} strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+      <path d="M14 34C9.6 34 6 30.4 6 26c0-4 3-7.4 6.9-7.9C14.4 13.9 18.7 11 23.6 11c5.2 0 9.7 3.2 11.3 7.8 4.3.2 7.7 3.7 7.7 8.1 0 4.4-3.6 8-8 8" />
+      <path d="M24 42V24" />
+      <path d="m18 30 6-6 6 6" />
     </svg>
   );
 }

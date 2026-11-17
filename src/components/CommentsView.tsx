@@ -1,26 +1,30 @@
 // DeLab Comments View — 面板内的站点级评论列表
 
-import type { CommentThread } from '../comment-store';
+import { isVisibleThread, type CommentThread } from '../comment-store';
 import { MONO } from '../theme-context';
-import { CircleCheckIcon } from './Icon';
+import { CircleCheckIcon, CloudUploadIcon } from './Icon';
 
 interface CommentsViewProps {
   comments: CommentThread[];
   activeId: string | null;
+  /** 正在上报的评论 id */
+  syncingIds: string[];
   /** 点击条目即定位到对应元素 */
   onLocate: (id: string) => void;
   /** 标记已解决：解决后该评论从列表中移除 */
   onToggleResolve: (thread: CommentThread) => void;
+  /** 同步到企微智能表格 */
+  onSync: (thread: CommentThread) => void;
   onCopyAll: () => void;
   /** 点击缩略图查看大图 */
   onPreview: (dataUrl: string) => void;
 }
 
 export function CommentsView({
-  comments, activeId, onLocate, onToggleResolve, onCopyAll, onPreview,
+  comments, activeId, syncingIds, onLocate, onToggleResolve, onSync, onCopyAll, onPreview,
 }: CommentsViewProps) {
-  // 已解决的评论等同于处理完毕，不再占用列表
-  const visible = comments.filter(thread => !thread.resolved);
+  // 已解决 / 已归档的评论不再展示
+  const visible = comments.filter(isVisibleThread);
 
   return (
     <div className="delab-cm">
@@ -202,6 +206,42 @@ export function CommentsView({
           color: var(--delab-accent, #32f08c);
           background: var(--delab-sel, rgba(0,0,0,0.07));
         }
+        /* 同步状态：待同步 / 同步中 / 已同步 / 失败重试 */
+        .delab-cm-sync {
+          appearance: none;
+          flex: none;
+          display: inline-flex;
+          align-items: center;
+          gap: 3px;
+          padding: 1px 6px;
+          border-radius: 999px;
+          border: 1px solid var(--delab-border, rgba(0,0,0,0.08));
+          background: transparent;
+          color: var(--delab-text-tertiary, #8a8a90);
+          font-size: 9.5px;
+          line-height: 1.5;
+          white-space: nowrap;
+          cursor: pointer;
+          transition: color 0.12s ease, border-color 0.12s ease, background 0.12s ease;
+        }
+        .delab-cm-sync[data-state='idle'] {
+          border-color: var(--delab-accent, #32f08c);
+          color: var(--delab-accent, #32f08c);
+        }
+        .delab-cm-sync[data-state='pending'] {
+          cursor: default;
+          opacity: 0.65;
+        }
+        .delab-cm-sync[data-state='synced'] {
+          border-color: var(--delab-accent-soft, rgba(50,240,140,0.24));
+          background: var(--delab-accent-soft, rgba(50,240,140,0.14));
+          color: var(--delab-accent, #32f08c);
+          cursor: default;
+        }
+        .delab-cm-sync[data-state='failed'] {
+          border-color: rgba(229,72,77,0.4);
+          color: var(--delab-danger, #e5484d);
+        }
       `}</style>
 
       <div className="delab-cm-toolbar">
@@ -246,6 +286,30 @@ export function CommentsView({
                 <span className="delab-cm-time">{formatTime(thread.createdAt)}</span>
                 <span className="delab-cm-sep" aria-hidden>·</span>
                 <span className="delab-cm-page">{pagePath(thread.url)}</span>
+                {syncingIds.includes(thread.id) && !thread.reportedAt ? (
+                  <span className="delab-cm-sync" data-state="pending">同步中…</span>
+                ) : thread.reportedAt ? (
+                  <span
+                    className="delab-cm-sync"
+                    data-state="synced"
+                    title={thread.remoteRecordId ? `record_id: ${thread.remoteRecordId}` : '已同步'}
+                  >
+                    已同步
+                  </span>
+                ) : (
+                  <button
+                    type="button"
+                    className="delab-cm-sync"
+                    data-state={thread.reportState === 'failed' ? 'failed' : 'idle'}
+                    title={thread.reportState === 'failed'
+                      ? `上次失败：${thread.lastReportError?.message ?? '未知错误'}，点击重试`
+                      : '同步到企微智能表格'}
+                    onClick={event => { event.stopPropagation(); onSync(thread); }}
+                  >
+                    <CloudUploadIcon size={9} />
+                    {thread.reportState === 'failed' ? '重试' : '同步'}
+                  </button>
+                )}
                 <button
                   type="button"
                   className="delab-cm-op"

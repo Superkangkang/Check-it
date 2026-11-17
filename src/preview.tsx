@@ -122,6 +122,16 @@ function App() {
         )));
         popover.close();
       },
+      // 预览页不连企微，只演示交互，不发出请求
+      onSync: () => {},
+      onArchive: thread => {
+        setThreads(prev => prev.map(item => (
+          item.id === thread.id ? { ...item, archived: true, archivedAt: Date.now() } : item
+        )));
+        popover.close();
+        button.hide();
+      },
+      onOpenSettings: () => {},
       // 预览页的 mock 评论没有截图，大图预览仅在生产插件里生效
       onPreviewImage: () => {},
       onCopyAll: () => { void navigator.clipboard?.writeText(toMarkdown(threadsRef.current, location.href)); },

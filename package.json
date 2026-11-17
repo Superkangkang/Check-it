@@ -1,6 +1,6 @@
 {
   "name": "delab",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "Inspect Lab - 设计师的设计走查验收工具",
   "scripts": {
     "build": "webpack --mode=production",

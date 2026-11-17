@@ -2,6 +2,7 @@
 
 import { useTheme } from '../theme-context';
 import { SunIcon, MoonIcon, CloseIcon } from './Icon';
+import { SettingsMenu } from './SettingsMenu';
 
 interface HeaderProps {
   onClose: () => void;
@@ -9,6 +10,8 @@ interface HeaderProps {
   /** Number of edited properties on the current element */
   modifiedCount?: number;
   onResetAll?: () => void;
+  /** 打开面板内的企微同步设置 */
+  onConfigureWecom?: () => void;
 }
 
 const iconBtn: React.CSSProperties = {
@@ -36,7 +39,7 @@ function logoUrl(): string {
   return 'icons/logo-128.png';
 }
 
-export function Header({ onClose, onDragStart, modifiedCount = 0, onResetAll }: HeaderProps) {
+export function Header({ onClose, onDragStart, modifiedCount = 0, onResetAll, onConfigureWecom }: HeaderProps) {
   const { isDark, toggle } = useTheme();
 
   return (
@@ -83,6 +86,7 @@ export function Header({ onClose, onDragStart, modifiedCount = 0, onResetAll }: 
         >
           {isDark ? <SunIcon size={15} /> : <MoonIcon size={15} />}
         </button>
+        {onConfigureWecom && <SettingsMenu onConfigure={onConfigureWecom} />}
         <button onClick={onClose} title="Close" style={iconBtn}
           onMouseEnter={e => { e.currentTarget.style.background = 'var(--delab-row-hover, rgba(0,0,0,0.045))'; }}
           onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}

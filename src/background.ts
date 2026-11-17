@@ -1,5 +1,19 @@
 // DeLab Service Worker
 
+import type { CommentThread } from './comment-store';
+import {
+  buildRecordValues,
+  buildTestValues,
+  checkConfigForSync,
+  normalizeConfig,
+  postRecords,
+  readConfig,
+  validateConfig,
+  type WecomConfig,
+  type WecomReportContext,
+  type WecomSyncResult,
+} from './wecom-sync';
+
 // --- 视口尺寸模拟（chrome.debugger + CDP，等价于 DevTools 设备工具栏） ---
 
 type ViewportState = { width: number; height: number };
@@ -169,9 +183,15 @@ async function readWorkspaceSize(): Promise<{ width: number; height: number }> {
   }
 }
 
-async function openWorkspace(sourceTabId: number, url: string, width: number, height: number) {
+async function openWorkspace(
+  sourceTabId: number,
+  url: string,
+  width: number,
+  height: number,
+  openSettings = false
+) {
   const workspaceUrl = chrome.runtime.getURL(
-    `workspace.html?url=${encodeURIComponent(url)}&w=${width}&h=${height}&fit=1`
+    `workspace.html?url=${encodeURIComponent(url)}&w=${width}&h=${height}&fit=1${openSettings ? '&settings=1' : ''}`
   );
   const tab = await chrome.tabs.create({ url: workspaceUrl, active: true, openerTabId: sourceTabId });
   if (tab.id != null) {
@@ -180,12 +200,52 @@ async function openWorkspace(sourceTabId: number, url: string, width: number, he
   }
 }
 
-async function openWorkspaceForTab(tab: chrome.tabs.Tab) {
+async function openWorkspaceForTab(tab: chrome.tabs.Tab, openSettings = false) {
   const tabId = tab.id;
   const url = tab.url ?? '';
   if (tabId == null || !/^https:\/\//.test(url)) return;
   const size = await readWorkspaceSize();
-  await openWorkspace(tabId, url, size.width, size.height);
+  await openWorkspace(tabId, url, size.width, size.height, openSettings);
+}
+
+// --- 企微智能表格单向上报 ---
+
+/** 评论上报：已上报过的直接返回，避免清空后重建产生重复行 */
+async function handleWecomSync(
+  thread: CommentThread,
+  context: WecomReportContext
+): Promise<WecomSyncResult> {
+  if (thread.reportedAt) {
+    return { ok: true, recordId: thread.remoteRecordId ?? null, alreadySynced: true };
+  }
+
+  const config = await readConfig();
+  const guard = checkConfigForSync(config);
+  if (guard) return guard;
+
+  const values = buildRecordValues(thread, context, config);
+  if (!values) {
+    return { ok: false, code: 'empty_comment', message: '评论内容为空，无法上报', retryable: false };
+  }
+  return postRecords(config, [values]);
+}
+
+/** 配置页测试：优先用未保存的草稿配置 */
+async function handleWecomTest(draft?: WecomConfig): Promise<WecomSyncResult> {
+  const config = draft ? normalizeConfig(draft) : await readConfig();
+  if (!config.enabled) {
+    return { ok: false, code: 'config_disabled', message: '请先开启企微同步', retryable: false };
+  }
+  const validation = validateConfig(config);
+  if (!validation.ok) {
+    return {
+      ok: false,
+      code: 'config_invalid',
+      message: Object.values(validation.errors)[0] ?? '配置不完整',
+      retryable: false,
+    };
+  }
+  return postRecords(config, [buildTestValues(config)]);
 }
 
 // 消息路由
@@ -200,7 +260,48 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     chrome.tabs
       .captureVisibleTab(windowId, { format: 'jpeg', quality: 80 })
       .then(dataUrl => sendResponse({ dataUrl }))
-      .catch(() => sendResponse({ dataUrl: null }));
+      .catch(error => {
+        console.warn('[Inspect Lab] captureVisibleTab 失败:', error);
+        sendResponse({ dataUrl: null });
+      });
+    return true;
+  }
+
+  // --- 企微智能表格同步 ---
+  if (message.type === 'OPEN_OPTIONS') {
+    void chrome.runtime.openOptionsPage();
+    sendResponse({ ok: true });
+    return false;
+  }
+
+  // 页内评论弹层里点「打开插件设置」：直接打开工作区并落到企微设置
+  if (message.type === 'OPEN_WECOM_SETTINGS') {
+    const tab = sender.tab;
+    if (tab) void openWorkspaceForTab(tab, true).catch(() => {});
+    else void chrome.runtime.openOptionsPage();
+    sendResponse({ ok: true });
+    return false;
+  }
+
+  if (message.type === 'WECOM_SYNC_COMMENT' || message.type === 'WECOM_TEST') {
+    void (async () => {
+      try {
+        const result = message.type === 'WECOM_TEST'
+          ? await handleWecomTest(message.config as WecomConfig | undefined)
+          : await handleWecomSync(
+              message.thread as CommentThread,
+              (message.context ?? {}) as WecomReportContext
+            );
+        sendResponse(result);
+      } catch {
+        sendResponse({
+          ok: false,
+          code: 'internal',
+          message: '扩展后台处理失败，请重试',
+          retryable: true,
+        } satisfies WecomSyncResult);
+      }
+    })();
     return true;
   }
 

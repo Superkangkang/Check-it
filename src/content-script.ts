@@ -18,13 +18,16 @@ import { Lightbox } from './lightbox';
 import { DelabMode, ModeSwitcher } from './mode-switcher';
 import {
   CommentThread,
+  archiveThread,
   createThread,
+  isVisibleThread,
   loadComments,
   pageKey,
   patchThread,
   saveThread,
   toMarkdown,
 } from './comment-store';
+import type { WecomSyncResult } from './wecom-sync';
 import { ElementIdentity, describeElement } from './element-identity';
 import { captureElementSnapshot } from './snapshot';
 import { ThemeManager } from './theme';
@@ -78,6 +81,8 @@ class DelabApp {
   private refreshQueued = false;
 
   private comments: CommentThread[] = [];
+  /** 正在上报的评论 id（仅内存态，不落库） */
+  private syncingIds = new Set<string>();
   /** 正在写评论的目标元素 */
   private composing: { target: Element; identity: ElementIdentity } | null = null;
   private activeCommentId: string | null = null;
@@ -105,6 +110,9 @@ class DelabApp {
     this.popover = new CommentPopover(root, {
       onSubmit: body => { void this.submitComment(body); },
       onToggleResolve: thread => { void this.toggleResolve(thread); },
+      onSync: thread => { void this.syncComment(thread.id); },
+      onArchive: thread => { void this.archiveComment(thread); },
+      onOpenSettings: () => { void chrome.runtime.sendMessage({ type: 'OPEN_WECOM_SETTINGS' }).catch(() => {}); },
       onCopyAll: () => { void this.handleCopyAll(); },
       onPreviewImage: dataUrl => this.lightbox.show(dataUrl),
       onDismiss: () => this.restoreCommentButton(),
@@ -138,6 +146,7 @@ class DelabApp {
         const thread = this.comments.find(item => item.id === id);
         if (thread) void this.toggleResolve(thread);
       },
+      onSyncComment: id => { void this.syncComment(id); },
       onSelectDom: path => this.selectDomPath(path),
       onHoverDom: path => this.hoverDomPath(path),
       onRefreshDom: () => this.sendDomTree(),
@@ -218,7 +227,7 @@ class DelabApp {
     this.pointer.enable();
 
     if (this.mode === 'comment') {
-      this.panelMgr.showComments(this.comments, this.activeCommentId);
+      this.panelMgr.showComments(this.comments, this.activeCommentId, [...this.syncingIds]);
     } else {
       this.panelMgr.showEmpty();
     }
@@ -493,8 +502,8 @@ class DelabApp {
   /** 评论数据变化后统一同步：页面气泡 + 面板列表 + 切换器计数 */
   private refreshCommentsUI() {
     this.renderPins();
-    this.panelMgr.setComments(this.comments, this.activeCommentId);
-    const openCount = this.comments.filter(thread => !thread.resolved).length;
+    this.panelMgr.setComments(this.comments, this.activeCommentId, [...this.syncingIds]);
+    const openCount = this.comments.filter(isVisibleThread).length;
     this.switcher?.setCommentCount(openCount);
   }
 
@@ -505,11 +514,11 @@ class DelabApp {
       return;
     }
 
-    // 已解决的评论视为处理完毕：气泡与面板列表一起收起，编号仍按原始顺序
+    // 已解决 / 已归档的评论视为处理完毕：气泡与面板列表一起收起，编号仍按原始顺序
     this.pins.render(
       this.comments
         .map((thread, index) => ({ thread, index: index + 1 }))
-        .filter(({ thread }) => !thread.resolved)
+        .filter(({ thread }) => isVisibleThread(thread))
         .map(({ thread, index }) => ({
           id: thread.id,
           index,
@@ -553,7 +562,7 @@ class DelabApp {
     if (!target) return;
     this.selectionFinder.show(target);
     this.commentButton.hide();
-    this.popover.openThread(target, thread, index + 1);
+    this.popover.openThread(target, thread, index + 1, this.syncingIds.has(id));
   }
 
   /** 从评论面板点击定位：滚动到元素并高亮 */
@@ -575,7 +584,7 @@ class DelabApp {
     this.commentButton.hide();
     this.refreshCommentsUI();
     target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    this.popover.openThread(target, thread, index + 1);
+    this.popover.openThread(target, thread, index + 1, this.syncingIds.has(id));
   }
 
   private async toggleResolve(thread: CommentThread) {
@@ -586,8 +595,95 @@ class DelabApp {
     const updated = this.comments[index];
     const target = this.pins.getTarget(thread.id);
     if (updated && target && this.popover.isOpen()) {
-      this.popover.openThread(target, updated, index + 1);
+      this.popover.openThread(target, updated, index + 1, this.syncingIds.has(updated.id));
     }
+  }
+
+  /** 同步一条评论到企微智能表格；只发从未成功上报过的评论 */
+  private async syncComment(id: string) {
+    const thread = this.comments.find(item => item.id === id);
+    if (!thread || thread.archived) return;
+    if (thread.reportedAt) {
+      this.showToast('这条评论已同步过，无需重复上报');
+      return;
+    }
+    if (this.syncingIds.has(id)) return;
+
+    this.syncingIds.add(id);
+    this.refreshCommentsUI();
+    this.rerenderOpenThread(id);
+
+    let result: WecomSyncResult;
+    try {
+      const response = await chrome.runtime.sendMessage({
+        type: 'WECOM_SYNC_COMMENT',
+        thread,
+        context: {
+          pageTitle: document.title,
+          viewport: { width: window.innerWidth, height: window.innerHeight },
+        },
+      }) as WecomSyncResult | undefined;
+
+      result = response ?? {
+        ok: false,
+        code: 'no_response',
+        message: '扩展后台没有返回结果，请重试',
+        retryable: true,
+      };
+    } catch {
+      result = {
+        ok: false,
+        code: 'no_response',
+        message: '扩展后台无响应，请重试',
+        retryable: true,
+      };
+    }
+
+    const attempts = (thread.reportAttempts ?? 0) + 1;
+    if (result.ok) {
+      this.comments = await patchThread(pageKey(), id, {
+        reportState: 'synced',
+        reportedAt: Date.now(),
+        remoteRecordId: result.recordId ?? undefined,
+        lastReportError: undefined,
+        reportAttempts: attempts,
+      });
+      this.showToast(result.alreadySynced ? '这条评论已同步过' : '已同步到企微智能表格');
+    } else {
+      this.comments = await patchThread(pageKey(), id, {
+        reportState: 'failed',
+        lastReportError: { code: result.code, message: result.message, at: Date.now() },
+        reportAttempts: attempts,
+      });
+      this.showToast(`同步失败：${result.message}`);
+    }
+
+    this.syncingIds.delete(id);
+    this.refreshCommentsUI();
+    this.rerenderOpenThread(id);
+  }
+
+  /** 面板处于打开状态时，用最新数据重绘当前评论弹层 */
+  private rerenderOpenThread(id: string) {
+    if (!this.popover.isOpen() || this.activeCommentId !== id) return;
+    const index = this.comments.findIndex(item => item.id === id);
+    const thread = this.comments[index];
+    if (!thread) return;
+    const target = this.pins.getTarget(id);
+    if (!target) return;
+    this.popover.openThread(target, thread, index + 1, this.syncingIds.has(id));
+  }
+
+  /** 清除评论 = 归档：不真删，隐藏气泡与列表，保留上报记录 */
+  private async archiveComment(thread: CommentThread) {
+    if (!window.confirm('清除后该评论将从气泡与列表隐藏，上报记录仍保留。确定清除？')) return;
+    this.comments = await archiveThread(pageKey(), thread.id);
+    this.activeCommentId = null;
+    this.selectionFinder.hide();
+    this.commentButton.hide();
+    this.popover.close();
+    this.refreshCommentsUI();
+    this.showToast('评论已清除（已归档，上报记录保留）');
   }
 
   private restoreCommentButton() {
@@ -608,11 +704,14 @@ class DelabApp {
   }
 
   private async handleCopyAll() {
-    const openCount = this.comments.filter(thread => !thread.resolved).length;
-    if (!this.comments.length) return;
+    const visible = this.comments.filter(isVisibleThread);
+    if (!visible.length) {
+      this.showToast('没有可复制的评论');
+      return;
+    }
     try {
       await this.writeClipboard(toMarkdown(this.comments, location.href));
-      this.showToast(`已复制 ${openCount || this.comments.length} 条评论，粘贴给 AI 即可`);
+      this.showToast(`已复制 ${visible.length} 条评论，粘贴给 AI 即可`);
     } catch {
       this.showToast('复制失败，请再点一次');
     }

@@ -56,17 +56,33 @@ export async function captureElementSnapshot(target: Element, host: HTMLElement)
   } finally {
     restoreOverlays(hidden);
   }
-  if (!dataUrl) return null;
+  if (!dataUrl) {
+    console.warn('[Inspect Lab] 截图失败：没有拿到可视区图像');
+    return null;
+  }
 
   try {
     const blob = await (await fetch(dataUrl)).blob();
     const bitmap = await createImageBitmap(blob);
     const dpr = window.devicePixelRatio || 1;
 
-    const sx = Math.round(crop.left * dpr);
-    const sy = Math.round(crop.top * dpr);
-    const sw = Math.min(Math.round((crop.right - crop.left) * dpr), bitmap.width - sx);
-    const sh = Math.min(Math.round((crop.bottom - crop.top) * dpr), bitmap.height - sy);
+    // 工作区把页面放在 iframe 里，截图却是整个标签页：
+    // 需要父页面提供 iframe 的位置和缩放，才能把 iframe 内坐标换算成整页坐标
+    const frame = await requestFrameGeometry();
+    const frameLeft = frame ? frame.left : 0;
+    const frameTop = frame ? frame.top : 0;
+    const frameScale = frame ? frame.scale : 1;
+
+    const sx = Math.max(0, Math.round((frameLeft + crop.left * frameScale) * dpr));
+    const sy = Math.max(0, Math.round((frameTop + crop.top * frameScale) * dpr));
+    const sw = Math.min(
+      Math.round((crop.right - crop.left) * frameScale * dpr),
+      bitmap.width - sx
+    );
+    const sh = Math.min(
+      Math.round((crop.bottom - crop.top) * frameScale * dpr),
+      bitmap.height - sy
+    );
     if (sw <= 0 || sh <= 0) {
       bitmap.close?.();
       return null;
@@ -130,6 +146,53 @@ function restoreOverlays(hidden: HiddenOverlay[]) {
 
 function overlaps(a: Rect, b: Rect): boolean {
   return a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
+}
+
+interface FrameGeometry {
+  /** iframe 左上角在标签页视口中的位置 */
+  left: number;
+  top: number;
+  /** iframe 的 CSS 缩放比例 */
+  scale: number;
+}
+
+/**
+ * 向父页面（工作区）要 iframe 的位置和缩放。
+ * 顶层页面直接返回 null；嵌在普通网站里的 iframe 等不到回复也会返回 null。
+ */
+async function requestFrameGeometry(): Promise<FrameGeometry | null> {
+  if (window.parent === window) return null;
+
+  const token = `snap_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`;
+  return new Promise<FrameGeometry | null>(resolve => {
+    const finish = (value: FrameGeometry | null) => {
+      window.removeEventListener('message', onMessage);
+      clearTimeout(timer);
+      resolve(value);
+    };
+    const onMessage = (event: MessageEvent) => {
+      const data = event.data as {
+        type?: string;
+        token?: string;
+        left?: number;
+        top?: number;
+        scale?: number;
+      } | null;
+      if (data?.type !== 'DELAB_SNAPSHOT_GEOMETRY' || data.token !== token) return;
+      finish({
+        left: Number(data.left) || 0,
+        top: Number(data.top) || 0,
+        scale: Number(data.scale) || 1,
+      });
+    };
+    const timer = setTimeout(() => finish(null), 200);
+    window.addEventListener('message', onMessage);
+    try {
+      window.parent.postMessage({ type: 'DELAB_SNAPSHOT_GEOMETRY_REQUEST', token }, '*');
+    } catch {
+      finish(null);
+    }
+  });
 }
 
 async function requestViewportCapture(): Promise<string | null> {

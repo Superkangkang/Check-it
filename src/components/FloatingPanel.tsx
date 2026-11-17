@@ -13,6 +13,7 @@ import { StylePanel } from './StylePanel';
 import { CssPanel } from './CssPanel';
 import { CommentsView } from './CommentsView';
 import { InspectIcon } from './Icon';
+import { WecomSettings } from './WecomSettings';
 
 const DEFAULT_WIDTH = 360;
 const MIN_WIDTH = 280;
@@ -62,11 +63,13 @@ function initialPanelView(): PanelView {
 }
 
 export function FloatingPanel({
-  data, mode, view = 'style', comments = [], activeCommentId = null,
+  data, mode, view = 'style', comments = [], activeCommentId = null, syncingCommentIds = [],
   visible, onClose, onCommit, onReset, onResetAll,
-  onLocateComment, onToggleResolveComment, onCopyAllComments, onPreviewCommentImage,
+  onLocateComment, onToggleResolveComment, onSyncComment, onCopyAllComments, onPreviewCommentImage,
   docked = false,
   showThemeToggle = true,
+  settingsOpen,
+  onSettingsOpenChange,
 }: {
   data: StylePayload | null;
   mode: 'empty' | 'content';
@@ -74,6 +77,8 @@ export function FloatingPanel({
   view?: 'style' | 'comments';
   comments?: CommentThread[];
   activeCommentId?: string | null;
+  /** 正在上报企微的评论 id */
+  syncingCommentIds?: string[];
   visible: boolean;
   onClose: () => void;
   onCommit: (prop: string, value: string) => boolean;
@@ -81,17 +86,28 @@ export function FloatingPanel({
   onResetAll: () => void;
   onLocateComment?: (id: string) => void;
   onToggleResolveComment?: (thread: CommentThread) => void;
+  onSyncComment?: (thread: CommentThread) => void;
   onCopyAllComments?: () => void;
   onPreviewCommentImage?: (dataUrl: string) => void;
   /** 停靠在浏览器侧边栏时铺满容器，不再浮动 / 拖拽 */
   docked?: boolean;
   /** 底部工具条是否显示明暗切换；工作区把它移到顶栏时为 false */
   showThemeToggle?: boolean;
+  /** 外部控制是否展示企微同步设置；不传则由面板内部管理 */
+  settingsOpen?: boolean;
+  onSettingsOpenChange?: (open: boolean) => void;
 }) {
   const [pos, setPos] = useState<PanelPosition>(defaultPosition);
   const [showAll, setShowAll] = useState(false);
   const [panelView, setPanelView] = useState<PanelView>(initialPanelView);
   const [colorFormat, setColorFormat] = useState<ColorFormat>('hex');
+  const [localSettingsOpen, setLocalSettingsOpen] = useState(false);
+
+  const settingsVisible = settingsOpen ?? localSettingsOpen;
+  const setSettingsVisible = useCallback((open: boolean) => {
+    setLocalSettingsOpen(open);
+    onSettingsOpenChange?.(open);
+  }, [onSettingsOpenChange]);
 
   const dragRef = useRef({ active: false, startX: 0, startY: 0, startLeft: 0, startBottom: 0 });
   const resizeRef = useRef({ active: false, startX: 0, startW: 0 });
@@ -191,17 +207,22 @@ export function FloatingPanel({
           <Header
             onClose={onClose}
             onDragStart={onDragStart}
-            modifiedCount={view === 'style' ? data?.modifiedCount ?? 0 : 0}
-            onResetAll={view === 'style' ? onResetAll : undefined}
+            modifiedCount={!settingsVisible && view === 'style' ? data?.modifiedCount ?? 0 : 0}
+            onResetAll={!settingsVisible && view === 'style' ? onResetAll : undefined}
+            onConfigureWecom={() => setSettingsVisible(true)}
           />
         )}
 
-        {view === 'comments' ? (
+        {settingsVisible ? (
+          <WecomSettings compact onBack={() => setSettingsVisible(false)} />
+        ) : view === 'comments' ? (
           <CommentsView
             comments={comments}
             activeId={activeCommentId}
+            syncingIds={syncingCommentIds}
             onLocate={id => onLocateComment?.(id)}
             onToggleResolve={thread => onToggleResolveComment?.(thread)}
+            onSync={thread => onSyncComment?.(thread)}
             onCopyAll={() => onCopyAllComments?.()}
             onPreview={dataUrl => onPreviewCommentImage?.(dataUrl)}
           />
@@ -257,7 +278,7 @@ export function FloatingPanel({
           </div>
         )}
 
-        {docked && (
+        {docked && !settingsVisible && (
           <PanelFooter
             showAll={showAll}
             onShowAllChange={setShowAll}
